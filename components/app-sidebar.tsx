@@ -16,12 +16,14 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Bot,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/assistant", label: "智能助手", icon: Bot },
   { href: "/personas", label: "IP管理", icon: Users },
   { href: "/accounts", label: "账号管理", icon: AtSign },
   { href: "/references", label: "参考库", icon: BookOpen },

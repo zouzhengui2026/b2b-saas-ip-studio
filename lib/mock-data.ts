@@ -634,4 +634,5 @@ export const initialAppState: AppState = {
   teamMembers: mockTeamMembers,
   settings: mockSettings,
   weeklyDraftSources: [],
+  assistantStage: "not_started",
 }

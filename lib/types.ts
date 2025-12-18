@@ -30,6 +30,11 @@ export interface Persona {
   brandBook?: BrandBook
   offers: Offer[]
   currentEpochId?: string
+  // 智能体相关：业务与账号定位（仅前端使用）
+  businessStage?: "idea" | "running" | "expanding"
+  mainOffer?: string
+  avgTicketSize?: number
+  targetCustomerDescription?: string
   createdAt: string
   updatedAt: string
 }
@@ -280,6 +285,9 @@ export interface Settings {
   bannedWords: string[]
   defaultWeeklyRatio: { douyin: number; xiaohongshu: number; wechat: number }
   defaultFormats: string[]
+  // 智能体相关偏好（仅前端使用）
+  preferredContentTone?: "story" | "teaching" | "qna"
+  dailyContentCapacity?: number
 }
 
 // App State 类型
@@ -302,6 +310,8 @@ export interface AppState {
   teamMembers: TeamMember[]
   settings: Settings[]
   weeklyDraftSources: string[]
+  // 智能体阶段（仅前端使用）
+  assistantStage?: "not_started" | "diagnosed" | "week1" | "week2"
 }
 
 export type AppAction =
@@ -361,3 +371,5 @@ export type AppAction =
   // Draft Sources
   | { type: "ADD_DRAFT_SOURCE"; payload: string }
   | { type: "CLEAR_DRAFT_SOURCES" }
+  // Assistant
+  | { type: "SET_ASSISTANT_STAGE"; payload: AppState["assistantStage"] }

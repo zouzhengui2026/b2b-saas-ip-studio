@@ -2,16 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react"
-import type {
-  AppState,
-  AppAction,
-  Content,
-  ContentStatus,
-  ContentMetrics,
-  QaResult,
-  PublishPack,
-  Settings,
-} from "./types"
+import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
 
@@ -226,6 +217,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
     case "CLEAR_DRAFT_SOURCES":
       return { ...state, weeklyDraftSources: [] }
+    case "SET_ASSISTANT_STAGE":
+      return { ...state, assistantStage: action.payload }
     default:
       return state
   }
