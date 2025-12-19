@@ -183,6 +183,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Team Members
     case "ADD_TEAM_MEMBER":
       return { ...state, teamMembers: [...state.teamMembers, action.payload] }
+    case "UPDATE_TEAM_MEMBER":
+      return { ...state, teamMembers: state.teamMembers.map((t) => t.id === action.payload.id ? action.payload : t) }
     case "DELETE_TEAM_MEMBER":
       return { ...state, teamMembers: state.teamMembers.filter((t) => t.id !== action.payload) }
     // Settings

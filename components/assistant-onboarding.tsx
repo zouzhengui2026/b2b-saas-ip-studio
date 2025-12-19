@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/lib/app-context"
 import type { Persona, Settings } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from "lucide-react"
+import { Loader2, MessageSquare, Package, Users, Globe, Sparkles } from "lucide-react"
 
 interface AssistantOnboardingProps {
   onFinished?: () => void
@@ -29,9 +29,9 @@ export function AssistantOnboarding({ onFinished }: AssistantOnboardingProps) {
 
   if (!state.currentIpId || !currentPersona) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed border-border/30">
         <CardHeader>
-          <CardTitle>请选择一个 IP</CardTitle>
+          <CardTitle className="text-muted-foreground">请选择一个 IP</CardTitle>
           <CardDescription>请先在顶部导航栏选择一个 IP，再开始智能助手问诊。</CardDescription>
         </CardHeader>
       </Card>
@@ -90,99 +90,137 @@ export function AssistantOnboarding({ onFinished }: AssistantOnboardingProps) {
     onFinished?.()
   }
 
+  const toneOptions = [
+    { value: "story" as const, label: "讲故事", desc: "用真实案例打动人" },
+    { value: "teaching" as const, label: "教方法", desc: "分享干货和技巧" },
+    { value: "qna" as const, label: "问答拆解", desc: "解答常见疑问" },
+  ]
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>先聊聊你的生意</CardTitle>
+    <Card className="relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-[oklch(0.65_0.22_280/0.05)] rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2" />
+      
+      <CardHeader className="relative">
+        <CardTitle className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+            <MessageSquare className="h-4 w-4 text-white" />
+          </div>
+          先聊聊你的生意
+        </CardTitle>
         <CardDescription>下面这些问题，帮我快速搞懂你是谁、卖什么、想吸引谁。</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="relative space-y-6">
+        {/* Business Description */}
         <div className="space-y-2">
-          <Label htmlFor="business-desc">你主要是做什么生意？ *</Label>
+          <Label htmlFor="business-desc" className="flex items-center gap-2 text-foreground">
+            <Package className="h-4 w-4 text-chart-1" />
+            你主要是做什么生意？ <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="business-desc"
             placeholder="比如：帮中小老板做短视频投放；线下有一家美容店；卖私教课……"
             value={businessDesc}
             onChange={(e) => setBusinessDesc(e.target.value)}
             rows={3}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 resize-none"
           />
         </div>
+
+        {/* Main Offer */}
         <div className="space-y-2">
-          <Label htmlFor="main-offer">你最想卖的核心产品/服务是什么？ *</Label>
+          <Label htmlFor="main-offer" className="flex items-center gap-2 text-foreground">
+            <Sparkles className="h-4 w-4 text-chart-2" />
+            你最想卖的核心产品/服务是什么？ <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="main-offer"
             placeholder="比如：1v1咨询服务、线下训练营、长期陪跑服务"
             value={mainOffer}
             onChange={(e) => setMainOffer(e.target.value)}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
           />
         </div>
+
+        {/* Average Ticket Size */}
         <div className="space-y-2">
-          <Label htmlFor="avg-ticket">大概客单价（可选）</Label>
+          <Label htmlFor="avg-ticket" className="text-foreground">大概客单价（可选）</Label>
           <Input
             id="avg-ticket"
             type="number"
             placeholder="比如：500，1999"
             value={avgTicketSize}
             onChange={(e) => setAvgTicketSize(e.target.value)}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
           />
         </div>
+
+        {/* Target Customer */}
         <div className="space-y-2">
-          <Label htmlFor="target-customer">你最想吸引什么样的客户？ *</Label>
+          <Label htmlFor="target-customer" className="flex items-center gap-2 text-foreground">
+            <Users className="h-4 w-4 text-chart-3" />
+            你最想吸引什么样的客户？ <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="target-customer"
             placeholder="比如：30-45岁的中小老板，自己带团队，有一定现金流，但内容这块比较薄弱……"
             value={targetCustomer}
             onChange={(e) => setTargetCustomer(e.target.value)}
             rows={3}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 resize-none"
           />
         </div>
+
+        {/* Platforms */}
         <div className="space-y-2">
-          <Label htmlFor="platforms">你主要想在哪些平台发内容？（逗号分隔）</Label>
+          <Label htmlFor="platforms" className="flex items-center gap-2 text-foreground">
+            <Globe className="h-4 w-4 text-chart-4" />
+            你主要想在哪些平台发内容？
+          </Label>
           <Input
             id="platforms"
             placeholder="比如：抖音, 小红书, 视频号"
             value={platforms}
             onChange={(e) => setPlatforms(e.target.value)}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
           />
         </div>
-        <div className="space-y-2">
-          <Label>你更喜欢哪种表达方式？</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={tone === "story" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTone("story")}
-            >
-              讲故事
-            </Button>
-            <Button
-              type="button"
-              variant={tone === "teaching" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTone("teaching")}
-            >
-              教方法
-            </Button>
-            <Button
-              type="button"
-              variant={tone === "qna" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setTone("qna")}
-            >
-              问答拆解
-            </Button>
+
+        {/* Tone Selection */}
+        <div className="space-y-3">
+          <Label className="text-foreground">你更喜欢哪种表达方式？</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {toneOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTone(option.value)}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  tone === option.value
+                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                    : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`font-medium ${tone === option.value ? "text-primary" : "text-foreground"}`}>
+                  {option.label}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">{option.desc}</div>
+              </button>
+            ))}
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={handleSubmit} disabled={submitting}>
+      <CardFooter className="relative flex justify-end gap-3 pt-2">
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={submitting}
+          className="btn-gradient border-0 px-6"
+        >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          先大概定一下
+          生成账号定位
         </Button>
       </CardFooter>
     </Card>
   )
 }
-
-

@@ -30,18 +30,17 @@ import type { WeeklyReport, Content } from "@/lib/types"
 type TimeRange = "this-week" | "last-week" | "30days"
 
 export default function WeeklyReviewPage() {
-  const { state, dispatch, currentOrgPersonas } = useAppStore()
+  const { state, dispatch, currentPersona } = useAppStore()
   const { toast } = useToast()
   const router = useRouter()
 
   const [timeRange, setTimeRange] = useState<TimeRange>("this-week")
-  const [selectedIpId, setSelectedIpId] = useState(state.currentIpId || "")
   const [loading, setLoading] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [currentReport, setCurrentReport] = useState<WeeklyReport | null>(null)
 
   // Check if IP is selected
-  if (!state.currentIpId) {
+  if (!state.currentIpId || !currentPersona) {
     return (
       <DashboardLayout>
         <PageHeader title="周复盘" breadcrumbs={[{ label: "周复盘" }]} />
@@ -50,9 +49,9 @@ export default function WeeklyReviewPage() {
     )
   }
 
-  // Get published contents for selected IP
+  // Get published contents for current IP
   const publishedContents = state.contents
-    .filter((c) => c.personaId === selectedIpId && c.status === "published" && c.metrics)
+    .filter((c) => c.personaId === state.currentIpId && c.status === "published" && c.metrics)
     .sort((a, b) => (b.metrics?.inquiries || 0) - (a.metrics?.inquiries || 0))
 
   const top3Contents = publishedContents.slice(0, 3)
@@ -64,17 +63,11 @@ export default function WeeklyReviewPage() {
   const totalDeals = publishedContents.reduce((sum, c) => sum + (c.metrics?.deals || 0), 0)
 
   const handleGenerateReport = async () => {
-    if (!selectedIpId) {
-      toast({ title: "错误", description: "请选择IP", variant: "destructive" })
-      return
-    }
-
     setLoading(true)
     toast({ title: "生成中", description: "正在生成周复盘报告..." })
     await sleep(1000)
 
     const weekNumber = getCurrentWeekNumber()
-    const selectedPersona = state.personas.find((p) => p.id === selectedIpId)
 
     // Mock conclusions based on data
     const conclusions: string[] = [
@@ -103,7 +96,7 @@ export default function WeeklyReviewPage() {
     }
 
     // Generate 12 draft topics
-    const topicClusters = selectedPersona?.brandBook?.contentPillars || ["产品评测", "行业观察", "选购指南"]
+    const topicClusters = currentPersona?.brandBook?.contentPillars || ["产品评测", "行业观察", "选购指南"]
     const formats = ["talking-head", "listicle", "tutorial", "story"]
     const platforms: ("douyin" | "xiaohongshu" | "wechat")[] = [
       "douyin",
@@ -130,7 +123,7 @@ export default function WeeklyReviewPage() {
 
     const report: WeeklyReport = {
       id: `report-${Date.now()}`,
-      personaId: selectedIpId,
+      personaId: state.currentIpId!,
       weekNumber,
       conclusions,
       top3ContentIds: top3Contents.map((c) => c.id),
@@ -159,7 +152,7 @@ export default function WeeklyReviewPage() {
     const weekNumber = getCurrentWeekNumber()
     const newContents: Content[] = currentReport.draftTopics.map((topic) => ({
       id: mockGenerateContentId(topic.platform),
-      personaId: selectedIpId,
+      personaId: state.currentIpId!,
       platform: topic.platform,
       title: topic.title,
       topicCluster: topic.topicCluster,
@@ -182,12 +175,6 @@ export default function WeeklyReviewPage() {
     router.push("/contents")
   }
 
-  const timeRangeLabels: Record<TimeRange, string> = {
-    "this-week": "本周",
-    "last-week": "上周",
-    "30days": "近30天",
-  }
-
   return (
     <DashboardLayout>
       <PageHeader title="周复盘" breadcrumbs={[{ label: "周复盘" }]} />
@@ -199,32 +186,21 @@ export default function WeeklyReviewPage() {
             <div className="space-y-2">
               <Label>时间范围</Label>
               <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[140px] bg-secondary/50 border-border/50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="glass-card border-border/50">
                   <SelectItem value="this-week">本周</SelectItem>
                   <SelectItem value="last-week">上周</SelectItem>
                   <SelectItem value="30days">近30天</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>选择IP</Label>
-              <Select value={selectedIpId} onValueChange={setSelectedIpId}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="选择IP" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentOrgPersonas.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-secondary/30 border border-border/30">
+              <span className="text-sm text-muted-foreground">当前IP：</span>
+              <span className="font-medium text-foreground">{currentPersona.name}</span>
             </div>
-            <Button onClick={handleGenerateReport} disabled={loading || !selectedIpId}>
+            <Button onClick={handleGenerateReport} disabled={loading} className="btn-gradient border-0">
               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarCheck className="h-4 w-4 mr-2" />}
               生成周复盘报告
             </Button>
@@ -239,7 +215,9 @@ export default function WeeklyReviewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
+                <div className="p-1.5 rounded-lg bg-amber-500/20">
+                  <Lightbulb className="h-4 w-4 text-amber-400" />
+                </div>
                 本周结论
               </CardTitle>
             </CardHeader>
@@ -259,7 +237,9 @@ export default function WeeklyReviewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="h-5 w-5 text-green-500" />
+                <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                </div>
                 Top 3 内容
               </CardTitle>
               <CardDescription>按咨询数排序</CardDescription>
@@ -271,18 +251,24 @@ export default function WeeklyReviewPage() {
                     <Link
                       key={content.id}
                       href={`/contents/${content.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
+                      className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-secondary/50 hover:border-primary/30 transition-all"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-muted-foreground">#{i + 1}</span>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                          i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white' :
+                          i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-slate-800' :
+                          'bg-gradient-to-br from-amber-600 to-amber-700 text-white'
+                        }`}>
+                          {i + 1}
+                        </div>
                         <div>
                           <p className="font-medium">{content.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline" className="text-xs">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <Badge variant="outline" className="text-xs border-border/50">
                               {platformNames[content.platform]}
                             </Badge>
                             <span>{content.metrics?.views?.toLocaleString() || 0} 播放</span>
-                            <span className="text-primary">{content.metrics?.inquiries || 0} 咨询</span>
+                            <span className="text-primary font-medium">{content.metrics?.inquiries || 0} 咨询</span>
                           </div>
                         </div>
                       </div>
@@ -300,7 +286,9 @@ export default function WeeklyReviewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <div className="p-1.5 rounded-lg bg-orange-500/20">
+                  <AlertTriangle className="h-4 w-4 text-orange-400" />
+                </div>
                 漏斗问题
               </CardTitle>
               <CardDescription>
@@ -312,7 +300,7 @@ export default function WeeklyReviewPage() {
               <ul className="space-y-2">
                 {currentReport.funnelIssues.map((issue, i) => (
                   <li key={i} className="flex items-start gap-2 text-muted-foreground">
-                    <span className="text-orange-500">•</span>
+                    <span className="text-orange-400">•</span>
                     <span>{issue}</span>
                   </li>
                 ))}
@@ -327,34 +315,34 @@ export default function WeeklyReviewPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-green-600 font-medium">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400 font-medium">
                     <TrendingUp className="h-4 w-4" />
                     加强 (Boost)
                   </div>
-                  <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1 text-muted-foreground">
                     {currentReport.nextWeekSuggestions.boost.map((item, i) => (
                       <li key={i}>• {item}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-red-600 font-medium">
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-medium">
                     <TrendingDown className="h-4 w-4" />
                     削减 (Cut)
                   </div>
-                  <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1 text-muted-foreground">
                     {currentReport.nextWeekSuggestions.cut.map((item, i) => (
                       <li key={i}>• {item}</li>
                     ))}
                   </ul>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-blue-600 font-medium">
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-400 font-medium">
                     <FileText className="h-4 w-4" />
                     补充证据
                   </div>
-                  <ul className="text-sm space-y-1">
+                  <ul className="text-sm space-y-1 text-muted-foreground">
                     {currentReport.nextWeekSuggestions.addEvidence.map((item, i) => (
                       <li key={i}>• {item}</li>
                     ))}
@@ -371,7 +359,7 @@ export default function WeeklyReviewPage() {
                 <CardTitle className="text-base">下周选题草案</CardTitle>
                 <CardDescription>共 {currentReport.draftTopics.length} 条选题</CardDescription>
               </div>
-              <Button onClick={handleImportAsContents} disabled={importLoading}>
+              <Button onClick={handleImportAsContents} disabled={importLoading} className="btn-gradient border-0">
                 {importLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -383,9 +371,9 @@ export default function WeeklyReviewPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {currentReport.draftTopics.map((topic, i) => (
-                  <div key={i} className="p-3 border rounded-lg space-y-2">
+                  <div key={i} className="p-4 border border-border/50 rounded-xl space-y-2 hover:border-border transition-colors">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{platformNames[topic.platform]}</Badge>
+                      <Badge variant="outline" className="border-border/50">{platformNames[topic.platform]}</Badge>
                       <Badge variant="secondary">{topic.topicCluster}</Badge>
                     </div>
                     <p className="font-medium text-sm">{topic.title}</p>
@@ -397,11 +385,13 @@ export default function WeeklyReviewPage() {
           </Card>
         </div>
       ) : (
-        <Card>
+        <Card className="border-dashed border-border/30">
           <CardContent className="py-12 text-center">
-            <CalendarCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <CalendarCheck className="h-8 w-8 text-muted-foreground" />
+            </div>
             <h3 className="text-lg font-semibold mb-2">周复盘</h3>
-            <p className="text-muted-foreground mb-4">选择时间范围和IP，点击上方按钮生成本周复盘报告</p>
+            <p className="text-muted-foreground mb-4">选择时间范围，点击上方按钮生成本周复盘报告</p>
           </CardContent>
         </Card>
       )}

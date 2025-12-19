@@ -5,15 +5,14 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppStore } from "@/lib/app-context"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles, Link2, FileText, Layers, ArrowLeft, Zap, CheckCircle2 } from "lucide-react"
 import { sleep } from "@/lib/utils"
 import type { Reference, ReferenceExtracted } from "@/lib/types"
 
@@ -122,7 +121,7 @@ export default function NewReferencePage() {
         id: `ref-${Date.now()}-${index}`,
         personaId: state.currentIpId!,
         type,
-        title: urlLine, // 先用链接本身做标题，后续可在详情页再编辑
+        title: urlLine,
         url: urlLine,
         platform,
         tags: tags
@@ -151,8 +150,8 @@ export default function NewReferencePage() {
   if (!state.currentIpId) {
     return (
       <DashboardLayout>
-        <PageHeader title="新建参考" breadcrumbs={[{ label: "参考库", href: "/references" }, { label: "新建" }]} />
-        <Card className="border-dashed">
+        <PageHeader title="收录参考" breadcrumbs={[{ label: "参考库", href: "/references" }, { label: "收录参考" }]} />
+        <Card className="border-dashed border-border/30">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">请先在顶部选择一个IP</p>
           </CardContent>
@@ -164,43 +163,97 @@ export default function NewReferencePage() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="新建参考"
-        breadcrumbs={[{ label: "参考库", href: "/references" }, { label: "新建参考" }]}
+        title="收录参考"
+        breadcrumbs={[{ label: "参考库", href: "/references" }, { label: "收录参考" }]}
         actions={
-          <Button variant="outline" onClick={() => router.push("/references")}>
+          <Button 
+            variant="outline" 
+            onClick={() => router.push("/references")}
+            className="border-border/50"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             返回列表
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">收录方式</Label>
-                <Tabs value={mode} onValueChange={(v) => setMode(v as "single" | "bulk")}>
-                  <TabsList className="grid grid-cols-2">
-                    <TabsTrigger value="single">单条</TabsTrigger>
-                    <TabsTrigger value="bulk">批量</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+        {/* Left: Form */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Mode Selection */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setMode("single")}
+              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                mode === "single"
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${mode === "single" ? "bg-primary/20" : "bg-secondary"}`}>
+                <FileText className={`h-5 w-5 ${mode === "single" ? "text-primary" : "text-muted-foreground"}`} />
               </div>
+              <div className="text-left">
+                <div className={`font-medium ${mode === "single" ? "text-primary" : "text-foreground"}`}>单条收录</div>
+                <div className="text-xs text-muted-foreground">详细填写一条参考内容</div>
+              </div>
+            </button>
+            <button
+              onClick={() => setMode("bulk")}
+              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                mode === "bulk"
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${mode === "bulk" ? "bg-primary/20" : "bg-secondary"}`}>
+                <Layers className={`h-5 w-5 ${mode === "bulk" ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div className="text-left">
+                <div className={`font-medium ${mode === "bulk" ? "text-primary" : "text-foreground"}`}>批量收录</div>
+                <div className="text-xs text-muted-foreground">一次粘贴多条链接</div>
+              </div>
+            </button>
+          </div>
 
-              {mode === "single" && (
+          {/* Form Card */}
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[oklch(0.65_0.22_280/0.05)] rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2" />
+            
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center gap-2">
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${mode === "single" ? "from-violet-500 to-purple-600" : "from-cyan-500 to-blue-600"}`}>
+                  {mode === "single" ? <FileText className="h-4 w-4 text-white" /> : <Layers className="h-4 w-4 text-white" />}
+                </div>
+                {mode === "single" ? "参考内容详情" : "批量链接"}
+              </CardTitle>
+              <CardDescription>
+                {mode === "single" 
+                  ? "填写标题和链接，可选填其他详细信息" 
+                  : "一次粘贴多条链接，每行一条，后续可在详情页补充信息"}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="relative space-y-5">
+              {mode === "single" ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="ref-title">标题 *</Label>
+                    <Label htmlFor="ref-title" className="flex items-center gap-2">
+                      标题 <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="ref-title"
-                      placeholder="参考内容标题"
+                      placeholder="参考内容标题，例如：3分钟讲透私域运营"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ref-url">链接</Label>
+                    <Label htmlFor="ref-url" className="flex items-center gap-2">
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
+                      链接
+                    </Label>
                     <Input
                       id="ref-url"
                       placeholder="https://..."
@@ -208,71 +261,51 @@ export default function NewReferencePage() {
                       onChange={(e) => setUrl(e.target.value)}
                     />
                   </div>
-                </>
-              )}
 
-              {mode === "bulk" && (
-                <div className="space-y-2">
-                  <Label htmlFor="ref-bulk-urls">批量链接 *</Label>
-                  <Textarea
-                    id="ref-bulk-urls"
-                    placeholder={"一次粘贴多条链接，每行一条，例如：\nhttps://example.com/1\nhttps://example.com/2"}
-                    value={bulkUrls}
-                    onChange={(e) => setBulkUrls(e.target.value)}
-                    rows={5}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    适合一次收录多条同行内容。这里只用链接作为初始标题，后续可在参考详情页里再补充标题和拆解。
-                  </p>
-                </div>
-              )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>平台</Label>
+                      <Select value={platform} onValueChange={(v) => setPlatform(v as Reference["platform"])}>
+                        <SelectTrigger className="bg-secondary/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-border/50">
+                          <SelectItem value="douyin">抖音</SelectItem>
+                          <SelectItem value="xiaohongshu">小红书</SelectItem>
+                          <SelectItem value="wechat">公众号</SelectItem>
+                          <SelectItem value="weibo">微博</SelectItem>
+                          <SelectItem value="bilibili">B站</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>类型</Label>
+                      <Select value={type} onValueChange={(v) => setType(v as Reference["type"])}>
+                        <SelectTrigger className="bg-secondary/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-border/50">
+                          <SelectItem value="video">视频</SelectItem>
+                          <SelectItem value="article">文章</SelectItem>
+                          <SelectItem value="post">帖子</SelectItem>
+                          <SelectItem value="document">文档</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>平台</Label>
-                  <Select value={platform} onValueChange={(v) => setPlatform(v as Reference["platform"])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="douyin">抖音</SelectItem>
-                      <SelectItem value="xiaohongshu">小红书</SelectItem>
-                      <SelectItem value="wechat">公众号</SelectItem>
-                      <SelectItem value="weibo">微博</SelectItem>
-                      <SelectItem value="bilibili">B站</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>类型</Label>
-                  <Select value={type} onValueChange={(v) => setType(v as Reference["type"])}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="video">视频</SelectItem>
-                      <SelectItem value="article">文章</SelectItem>
-                      <SelectItem value="post">帖子</SelectItem>
-                      <SelectItem value="document">文档</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ref-tags">标签 (逗号分隔)</Label>
-                <Input
-                  id="ref-tags"
-                  placeholder="如：爆款, 竞品分析"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                />
-              </div>
-
-              {mode === "single" && (
-                <>
                   <div className="space-y-2">
-                    <Label htmlFor="ref-snapshot">截图链接</Label>
+                    <Label htmlFor="ref-tags">标签（逗号分隔）</Label>
+                    <Input
+                      id="ref-tags"
+                      placeholder="如：爆款, 竞品分析, 选题"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ref-snapshot">截图链接（可选）</Label>
                     <Input
                       id="ref-snapshot"
                       placeholder="https://..."
@@ -292,75 +325,217 @@ export default function NewReferencePage() {
                     />
                   </div>
                 </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="ref-bulk-urls" className="flex items-center gap-2">
+                      批量链接 <span className="text-destructive">*</span>
+                    </Label>
+                    <Textarea
+                      id="ref-bulk-urls"
+                      placeholder={"一次粘贴多条链接，每行一条，例如：\nhttps://www.douyin.com/video/xxx\nhttps://www.xiaohongshu.com/explore/xxx\nhttps://mp.weixin.qq.com/s/xxx"}
+                      value={bulkUrls}
+                      onChange={(e) => setBulkUrls(e.target.value)}
+                      rows={8}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      已输入 {bulkUrls.split("\n").filter(l => l.trim()).length} 条链接
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>平台（统一设置）</Label>
+                      <Select value={platform} onValueChange={(v) => setPlatform(v as Reference["platform"])}>
+                        <SelectTrigger className="bg-secondary/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-border/50">
+                          <SelectItem value="douyin">抖音</SelectItem>
+                          <SelectItem value="xiaohongshu">小红书</SelectItem>
+                          <SelectItem value="wechat">公众号</SelectItem>
+                          <SelectItem value="weibo">微博</SelectItem>
+                          <SelectItem value="bilibili">B站</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>类型（统一设置）</Label>
+                      <Select value={type} onValueChange={(v) => setType(v as Reference["type"])}>
+                        <SelectTrigger className="bg-secondary/50 border-border/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-card border-border/50">
+                          <SelectItem value="video">视频</SelectItem>
+                          <SelectItem value="article">文章</SelectItem>
+                          <SelectItem value="post">帖子</SelectItem>
+                          <SelectItem value="document">文档</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ref-tags">标签（统一设置，逗号分隔）</Label>
+                    <Input
+                      id="ref-tags"
+                      placeholder="如：同行参考, 抖音爆款"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                    />
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
 
+          {/* Action Buttons */}
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => router.push("/references")}>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push("/references")}
+              className="border-border/50"
+            >
               取消
             </Button>
             {mode === "bulk" ? (
-              <Button onClick={handleSaveBulk} disabled={saving}>
+              <Button 
+                onClick={handleSaveBulk} 
+                disabled={saving}
+                className="btn-gradient border-0"
+              >
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                保存链接
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                保存 {bulkUrls.split("\n").filter(l => l.trim()).length} 条链接
               </Button>
             ) : (
-              <Button onClick={handleSave} disabled={saving}>
+              <Button 
+                onClick={handleSave} 
+                disabled={saving}
+                className="btn-gradient border-0"
+              >
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                保存
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                保存参考
               </Button>
             )}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">AI 拆解</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-transparent"
-                  onClick={handleGenerateExtract}
-                  disabled={generating}
-                >
-                  {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  生成拆解
-                </Button>
-              </div>
-
-              {extracted ? (
-                <div className="p-3 bg-muted rounded-lg space-y-2 text-sm">
-                  <p>
-                    <span className="font-medium">Hook:</span> {extracted.hook}
-                  </p>
-                  <p>
-                    <span className="font-medium">结构:</span> {extracted.structure}
-                  </p>
-                  {extracted.cta && (
-                    <p>
-                      <span className="font-medium">CTA:</span> {extracted.cta}
-                    </p>
-                  )}
-                  {extracted.highlights && (
-                    <p>
-                      <span className="font-medium">亮点:</span> {extracted.highlights.join(", ")}
-                    </p>
-                  )}
-                  {extracted.risks && (
-                    <p>
-                      <span className="font-medium">风险:</span> {extracted.risks.join(", ")}
-                    </p>
-                  )}
+        {/* Right: AI Extract */}
+        <div className="space-y-6">
+          <Card className="relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[oklch(0.70_0.15_200/0.08)] rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2" />
+            
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                  <Sparkles className="h-4 w-4 text-white" />
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  点击「生成拆解」，根据标题自动提取 Hook、结构和亮点，方便后续选题与工单生成。
+                AI 拆解
+              </CardTitle>
+              <CardDescription>
+                自动提取 Hook、结构、亮点，方便后续选题
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="relative space-y-4">
+              <Button
+                variant="outline"
+                className="w-full border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                onClick={handleGenerateExtract}
+                disabled={generating || !title}
+              >
+                {generating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Zap className="mr-2 h-4 w-4 text-amber-400" />
+                生成拆解
+              </Button>
+
+              {!title && mode === "single" && (
+                <p className="text-xs text-muted-foreground text-center">
+                  请先填写标题再生成拆解
                 </p>
               )}
+
+              {mode === "bulk" && (
+                <p className="text-xs text-muted-foreground text-center">
+                  批量收录后，可在参考详情页单独进行拆解
+                </p>
+              )}
+
+              {extracted && (
+                <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/30">
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Hook</div>
+                    <p className="text-sm text-foreground">{extracted.hook}</p>
+                  </div>
+                  <div className="divider-glow" />
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">结构</div>
+                    <p className="text-sm text-foreground">{extracted.structure}</p>
+                  </div>
+                  {extracted.cta && (
+                    <>
+                      <div className="divider-glow" />
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">CTA</div>
+                        <p className="text-sm text-foreground">{extracted.cta}</p>
+                      </div>
+                    </>
+                  )}
+                  {extracted.highlights && extracted.highlights.length > 0 && (
+                    <>
+                      <div className="divider-glow" />
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">亮点</div>
+                        <div className="flex flex-wrap gap-1">
+                          {extracted.highlights.map((h, i) => (
+                            <span key={i} className="text-xs px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-400">
+                              {h}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {extracted.risks && extracted.risks.length > 0 && (
+                    <>
+                      <div className="divider-glow" />
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">风险</div>
+                        <div className="flex flex-wrap gap-1">
+                          {extracted.risks.map((r, i) => (
+                            <span key={i} className="text-xs px-2 py-1 rounded-md bg-amber-500/20 text-amber-400">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tips Card */}
+          <Card className="border-border/30">
+            <CardContent className="pt-6">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">💡</span>
+                  <span>收录同行爆款内容，分析其 Hook 和结构</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">💡</span>
+                  <span>标签方便后续筛选，如「爆款」「竞品」等</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-primary">💡</span>
+                  <span>AI 拆解可帮你快速理解内容结构</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -368,5 +543,3 @@ export default function NewReferencePage() {
     </DashboardLayout>
   )
 }
-
-

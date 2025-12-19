@@ -14,16 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Building2, ChevronDown, User2, Zap, BookmarkPlus, Sparkles, Mic, UserPlus, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { GenerateWeeklyWizard } from "./generate-weekly-wizard"
-import { AddReferenceDialog } from "./add-reference-dialog"
 import { AddInboxDialog } from "./add-inbox-dialog"
 import { AddLeadDrawer } from "./add-lead-dialog"
 
 export function AppTopbar() {
   const { state, currentOrg, currentPersona, currentOrgPersonas, setCurrentOrg, setCurrentIp, logout } = useAppStore()
   const router = useRouter()
-  const [showWeeklyWizard, setShowWeeklyWizard] = useState(false)
-  const [showRefDialog, setShowRefDialog] = useState(false)
   const [showInboxDialog, setShowInboxDialog] = useState(false)
   const [showLeadDialog, setShowLeadDialog] = useState(false)
 
@@ -34,25 +30,28 @@ export function AppTopbar() {
 
   return (
     <>
-      <header className="h-14 border-b border-border bg-card px-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="h-14 border-b border-border/50 bg-background/60 backdrop-blur-xl px-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           {/* Org Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 bg-transparent">
-                <Building2 className="h-4 w-4" />
-                <span>{currentOrg?.name || "选择组织"}</span>
-                <ChevronDown className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
+              >
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">{currentOrg?.name || "选择组织"}</span>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>切换组织</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="start" className="glass-card border-border/50">
+              <DropdownMenuLabel className="text-muted-foreground">切换组织</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border/50" />
               {state.orgs.map((org) => (
                 <DropdownMenuItem
                   key={org.id}
                   onClick={() => setCurrentOrg(org.id)}
-                  className={org.id === state.currentOrgId ? "bg-accent" : ""}
+                  className={org.id === state.currentOrgId ? "bg-primary/20 text-primary" : ""}
                 >
                   {org.name}
                 </DropdownMenuItem>
@@ -63,15 +62,18 @@ export function AppTopbar() {
           {/* IP Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 bg-transparent">
-                <User2 className="h-4 w-4" />
-                <span>{currentPersona?.name || "选择IP"}</span>
-                <ChevronDown className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
+              >
+                <User2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-foreground">{currentPersona?.name || "选择IP"}</span>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>切换IP</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="start" className="glass-card border-border/50">
+              <DropdownMenuLabel className="text-muted-foreground">切换IP</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-border/50" />
               {currentOrgPersonas.length === 0 ? (
                 <DropdownMenuItem disabled>暂无IP</DropdownMenuItem>
               ) : (
@@ -79,7 +81,7 @@ export function AppTopbar() {
                   <DropdownMenuItem
                     key={persona.id}
                     onClick={() => setCurrentIp(persona.id)}
-                    className={persona.id === state.currentIpId ? "bg-accent" : ""}
+                    className={persona.id === state.currentIpId ? "bg-primary/20 text-primary" : ""}
                   >
                     {persona.name}
                   </DropdownMenuItem>
@@ -89,32 +91,44 @@ export function AppTopbar() {
           </DropdownMenu>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Quick Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" className="gap-2">
+              <Button className="gap-2 btn-gradient border-0">
                 <Zap className="h-4 w-4" />
                 <span>快速操作</span>
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowRefDialog(true)}>
-                <BookmarkPlus className="h-4 w-4 mr-2" />
-                收录参考
+            <DropdownMenuContent align="end" className="glass-card border-border/50 w-48">
+              <DropdownMenuItem 
+                onClick={() => router.push("/references/new")}
+                className="gap-3 py-2.5"
+              >
+                <BookmarkPlus className="h-4 w-4 text-chart-2" />
+                <span>收录参考</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/weekly-wizard")}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                生成本周选题
+              <DropdownMenuItem 
+                onClick={() => router.push("/weekly-wizard")}
+                className="gap-3 py-2.5"
+              >
+                <Sparkles className="h-4 w-4 text-chart-1" />
+                <span>生成本周选题</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowInboxDialog(true)}>
-                <Mic className="h-4 w-4 mr-2" />
-                开始录音
+              <DropdownMenuItem 
+                onClick={() => setShowInboxDialog(true)}
+                className="gap-3 py-2.5"
+              >
+                <Mic className="h-4 w-4 text-chart-3" />
+                <span>开始录音</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowLeadDialog(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                创建线索
+              <DropdownMenuItem 
+                onClick={() => setShowLeadDialog(true)}
+                className="gap-3 py-2.5"
+              >
+                <UserPlus className="h-4 w-4 text-chart-4" />
+                <span>创建线索</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -122,24 +136,28 @@ export function AppTopbar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="rounded-full hover:ring-2 hover:ring-primary/30 transition-all">
+                <Avatar className="h-8 w-8 ring-2 ring-border/50">
                   <AvatarImage src={state.currentUser?.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{state.currentUser?.name?.charAt(0) || "U"}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-br from-[oklch(0.55_0.25_280)] to-[oklch(0.60_0.20_220)] text-white text-sm">
+                    {state.currentUser?.name?.charAt(0) || "U"}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span>{state.currentUser?.name}</span>
-                  <span className="text-xs text-muted-foreground">{state.currentUser?.email}</span>
+            <DropdownMenuContent align="end" className="glass-card border-border/50 w-56">
+              <DropdownMenuLabel className="py-3">
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium">{state.currentUser?.name}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{state.currentUser?.email}</span>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/settings")}>个人信息</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              <DropdownMenuSeparator className="bg-border/50" />
+              <DropdownMenuItem onClick={() => router.push("/settings")} className="py-2.5">
+                个人信息
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border/50" />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive py-2.5">
                 <LogOut className="h-4 w-4 mr-2" />
                 退出登录
               </DropdownMenuItem>
@@ -148,8 +166,6 @@ export function AppTopbar() {
         </div>
       </header>
 
-      {/* 周选题向导改为独立页面，这里不再渲染弹窗版本 */}
-      <AddReferenceDialog open={showRefDialog} onOpenChange={setShowRefDialog} />
       <AddInboxDialog open={showInboxDialog} onOpenChange={setShowInboxDialog} />
       <AddLeadDrawer open={showLeadDialog} onOpenChange={setShowLeadDialog} />
     </>

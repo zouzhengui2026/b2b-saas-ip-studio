@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/lib/app-context"
-import { TrendingUp, Sparkles } from "lucide-react"
+import { TrendingUp, Sparkles, BarChart3, Lightbulb, ArrowRight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { getCurrentWeekNumber, sleep, platformNames } from "@/lib/utils"
 import type { Content } from "@/lib/types"
@@ -77,43 +77,68 @@ export function AssistantWeeklySummary() {
   if (!state.currentIpId) return null
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[oklch(0.70_0.18_200/0.08)] rounded-full blur-[40px] -translate-y-1/2 translate-x-1/2" />
+      
+      <CardHeader className="relative">
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          一周小结 & 下周建议
+          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600">
+            <BarChart3 className="h-4 w-4 text-white" />
+          </div>
+          一周小结
         </CardTitle>
         <CardDescription>基于你目前回填的咨询数据，给出简单可执行的方向建议。</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative">
         {hasEnoughData ? (
-          <ul className="space-y-2 text-sm">
+          <div className="space-y-3">
             {insights.map((item, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <span className="text-primary font-medium">{idx + 1}.</span>
-                <span>{item}</span>
-              </li>
+              <div 
+                key={idx} 
+                className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 border border-border/30"
+              >
+                <div className={`p-1.5 rounded-lg mt-0.5 ${
+                  idx === 0 ? 'bg-emerald-500/20' : idx === 1 ? 'bg-amber-500/20' : 'bg-violet-500/20'
+                }`}>
+                  <Lightbulb className={`h-3.5 w-3.5 ${
+                    idx === 0 ? 'text-emerald-400' : idx === 1 ? 'text-amber-400' : 'text-violet-400'
+                  }`} />
+                </div>
+                <p className="text-sm text-foreground/90 leading-relaxed">{item}</p>
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            目前带有咨询数据的内容还比较少，先从「今日任务」开始稳定发几条，后面我会帮你自动总结哪类内容更值钱。
-          </p>
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+              <TrendingUp className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">数据积累中...</p>
+            <p className="text-xs text-muted-foreground/60">
+              先从「今日任务」开始稳定发几条，后面我会帮你自动总结哪类内容更值钱。
+            </p>
+          </div>
         )}
       </CardContent>
       {hasEnoughData && (
-        <CardFooter className="flex justify-between items-center">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span>可以一键基于这些内容，生成下周的 2~3 条草案。</span>
+        <CardFooter className="relative flex flex-col gap-3 pt-0">
+          <div className="divider-glow w-full" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span>可以一键基于这些内容，生成下周的 2~3 条草案</span>
           </div>
-          <Button variant="outline" size="sm" onClick={handleGenerateNextWeek}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleGenerateNextWeek}
+            className="w-full border-border/50 hover:border-primary/50 hover:bg-primary/5"
+          >
             生成下周草案
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardFooter>
       )}
     </Card>
   )
 }
-
-

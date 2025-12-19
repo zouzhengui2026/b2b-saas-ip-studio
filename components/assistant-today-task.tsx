@@ -10,10 +10,23 @@ import { useAppStore } from "@/lib/app-context"
 import type { Content, ContentStatus } from "@/lib/types"
 import { getCurrentWeekNumber, mockGenerateContentId, sleep } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from "lucide-react"
+import { Loader2, Zap, Target, BookOpen, Gift, Video, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 type ThemeType = "pain" | "story" | "tip" | "offer"
+
+const themeOptions = [
+  { value: "pain" as const, label: "客户常见痛点", icon: Target, color: "from-rose-500 to-pink-500" },
+  { value: "story" as const, label: "真实故事/案例", icon: BookOpen, color: "from-violet-500 to-purple-500" },
+  { value: "tip" as const, label: "操作技巧/清单", icon: Sparkles, color: "from-amber-500 to-orange-500" },
+  { value: "offer" as const, label: "产品/服务说明", icon: Gift, color: "from-emerald-500 to-green-500" },
+]
+
+const platformOptions = [
+  { value: "douyin" as const, label: "抖音", icon: Video },
+  { value: "xiaohongshu" as const, label: "小红书", icon: BookOpen },
+  { value: "wechat" as const, label: "视频号", icon: Video },
+]
 
 export function AssistantTodayTask() {
   const { state, dispatch, currentPersona, currentEpoch } = useAppStore()
@@ -108,56 +121,108 @@ export function AssistantTodayTask() {
     router.push(`/contents/${newContent.id}`)
   }
 
+  const selectedTheme = themeOptions.find(t => t.value === theme)
+
   return (
-    <Card className="border-dashed">
-      <CardHeader>
-        <CardTitle>今日任务：先拿下一条内容</CardTitle>
+    <Card className="relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-[oklch(0.70_0.15_200/0.05)] rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2" />
+      
+      <CardHeader className="relative">
+        <CardTitle className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500">
+            <Zap className="h-4 w-4 text-white" />
+          </div>
+          今日任务：先拿下一条内容
+        </CardTitle>
         <CardDescription>用一句你最想讲的话，生成一条今天的内容工单和脚本草稿。</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>今天更想做哪一类内容？</Label>
-            <Select value={theme} onValueChange={(v) => setTheme(v as ThemeType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pain">客户常见痛点</SelectItem>
-                <SelectItem value="story">真实故事/案例</SelectItem>
-                <SelectItem value="tip">操作技巧/清单</SelectItem>
-                <SelectItem value="offer">产品/服务说明</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>准备发到哪个平台？</Label>
-            <Select value={platform} onValueChange={(v) => setPlatform(v as Content["platform"])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="douyin">抖音</SelectItem>
-                <SelectItem value="xiaohongshu">小红书</SelectItem>
-                <SelectItem value="wechat">视频号</SelectItem>
-              </SelectContent>
-            </Select>
+      <CardContent className="relative space-y-6">
+        {/* Theme Selection */}
+        <div className="space-y-3">
+          <Label className="text-foreground">今天更想做哪一类内容？</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {themeOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTheme(option.value)}
+                className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+                  theme === option.value
+                    ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                    : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${option.color}`}>
+                  <option.icon className="h-4 w-4 text-white" />
+                </div>
+                <span className={`font-medium text-sm ${theme === option.value ? "text-primary" : "text-foreground"}`}>
+                  {option.label}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Platform Selection */}
         <div className="space-y-2">
-          <Label htmlFor="seed">用你自己的话说一句，今天最想讲什么？ *</Label>
+          <Label className="text-foreground">准备发到哪个平台？</Label>
+          <Select value={platform} onValueChange={(v) => setPlatform(v as Content["platform"])}>
+            <SelectTrigger className="bg-secondary/50 border-border/50 h-11">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="glass-card border-border/50">
+              {platformOptions.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  <span className="flex items-center gap-2">
+                    <p.icon className="h-4 w-4 text-muted-foreground" />
+                    {p.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Seed Input */}
+        <div className="space-y-2">
+          <Label htmlFor="seed" className="text-foreground">
+            用你自己的话说一句，今天最想讲什么？ <span className="text-destructive">*</span>
+          </Label>
           <Textarea
             id="seed"
-            placeholder='比如：“很多老板做抖音一年，一条带货视频都没有” / “我有个学员3个月从0做到月收30万”'
+            placeholder='比如："很多老板做抖音一年，一条带货视频都没有" / "我有个学员3个月从0做到月收30万"'
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
             rows={3}
+            className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 resize-none"
           />
         </div>
+
+        {/* Preview hint */}
+        {seed && selectedTheme && (
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="text-sm text-muted-foreground mb-1">预计生成标题：</div>
+            <div className="text-foreground font-medium">
+              {theme === "pain"
+                ? `很多老板都在问：${seed}`
+                : theme === "story"
+                  ? `${seed} 的真实故事`
+                  : theme === "tip"
+                    ? `${seed} 的3个关键做法`
+                    : `为什么说${seed} 很适合你现在的阶段？`}
+            </div>
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button onClick={handleGenerate} disabled={loading}>
+      <CardFooter className="relative flex justify-end pt-2">
+        <Button 
+          onClick={handleGenerate} 
+          disabled={loading}
+          className="btn-gradient border-0 px-6"
+        >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Zap className="mr-2 h-4 w-4" />
           一键生成今日内容
         </Button>
       </CardFooter>
@@ -173,6 +238,3 @@ export function getTodayTaskStatusForContents(
   // V1 先全部视为 need_content，后续可以按日期和状态细分
   return "need_content"
 }
-
-
-

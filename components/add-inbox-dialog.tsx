@@ -1,22 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppStore } from "@/lib/app-context"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Mic, FileText } from "lucide-react"
+import { Loader2, Mic, FileText, Sparkles, Link2, Zap } from "lucide-react"
 import { sleep } from "@/lib/utils"
 import type { InboxItem, InboxExtractedAssets } from "@/lib/types"
 
@@ -34,6 +33,16 @@ export function AddInboxDialog({ open, onOpenChange }: AddInboxDialogProps) {
   const [content, setContent] = useState("")
   const [audioUrl, setAudioUrl] = useState("")
   const [loading, setLoading] = useState(false)
+
+  // Reset form when drawer closes
+  useEffect(() => {
+    if (!open) {
+      setTitle("")
+      setContent("")
+      setAudioUrl("")
+      setType("voice")
+    }
+  }, [open])
 
   const handleSubmit = async () => {
     if (!content && !audioUrl) {
@@ -60,7 +69,7 @@ export function AddInboxDialog({ open, onOpenChange }: AddInboxDialogProps) {
       id: `inbox-${Date.now()}`,
       personaId: state.currentIpId,
       type,
-      title: title || "新录音",
+      title: title || (type === "voice" ? "新录音" : "新笔记"),
       transcript: content || undefined,
       memoSummary: content ? `内容摘要：${content.slice(0, 50)}...` : undefined,
       duration: type === "voice" ? Math.floor(Math.random() * 180) + 30 : undefined,
@@ -73,40 +82,82 @@ export function AddInboxDialog({ open, onOpenChange }: AddInboxDialogProps) {
     dispatch({ type: "ADD_INBOX", payload: newInbox })
     toast({ title: "提交成功", description: "已自动提取选题灵感和关键信息" })
 
-    setTitle("")
-    setContent("")
-    setAudioUrl("")
     setLoading(false)
     onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>添加录音/笔记</DialogTitle>
-          <DialogDescription>记录您的灵感和想法，AI将自动提取关键信息</DialogDescription>
-        </DialogHeader>
-
-        <Tabs value={type} onValueChange={(v) => setType(v as "voice" | "text")} className="py-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="voice">
-              <Mic className="h-4 w-4 mr-2" />
-              语音录音
-            </TabsTrigger>
-            <TabsTrigger value="text">
-              <FileText className="h-4 w-4 mr-2" />
-              文本笔记
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="voice" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="voice-title">标题</Label>
-              <Input id="voice-title" placeholder="录音标题" value={title} onChange={(e) => setTitle(e.target.value)} />
+    <Drawer open={open} onOpenChange={onOpenChange} direction="right">
+      <DrawerContent className="h-full w-full sm:max-w-md ml-auto rounded-l-xl rounded-r-none">
+        <DrawerHeader className="border-b border-border/50 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg">
+              {type === "voice" ? <Mic className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
             </div>
+            <div>
+              <DrawerTitle className="text-xl">添加录音/笔记</DrawerTitle>
+              <DrawerDescription>记录灵感和想法，AI 自动提取关键信息</DrawerDescription>
+            </div>
+          </div>
+        </DrawerHeader>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Type Selection */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setType("voice")}
+              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                type === "voice"
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${type === "voice" ? "bg-primary/20" : "bg-secondary"}`}>
+                <Mic className={`h-4 w-4 ${type === "voice" ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div className="text-left">
+                <div className={`font-medium ${type === "voice" ? "text-primary" : "text-foreground"}`}>语音录音</div>
+                <div className="text-xs text-muted-foreground">录制或粘贴音频</div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setType("text")}
+              className={`flex-1 flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                type === "text"
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border/50 bg-secondary/30 hover:border-border hover:bg-secondary/50"
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${type === "text" ? "bg-primary/20" : "bg-secondary"}`}>
+                <FileText className={`h-4 w-4 ${type === "text" ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div className="text-left">
+                <div className={`font-medium ${type === "text" ? "text-primary" : "text-foreground"}`}>文本笔记</div>
+                <div className="text-xs text-muted-foreground">直接输入文字</div>
+              </div>
+            </button>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="inbox-title" className="text-foreground">标题</Label>
+            <Input 
+              id="inbox-title" 
+              placeholder={type === "voice" ? "录音标题" : "笔记标题"} 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+            />
+          </div>
+
+          {/* Voice specific: Audio URL */}
+          {type === "voice" && (
             <div className="space-y-2">
-              <Label htmlFor="audio-url">音频链接 (可选)</Label>
+              <Label htmlFor="audio-url" className="flex items-center gap-2 text-foreground">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                音频链接（可选）
+              </Label>
               <Input
                 id="audio-url"
                 placeholder="https://..."
@@ -114,46 +165,74 @@ export function AddInboxDialog({ open, onOpenChange }: AddInboxDialogProps) {
                 onChange={(e) => setAudioUrl(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="voice-content">文字内容 (模拟语音转文字)</Label>
-              <Textarea
-                id="voice-content"
-                placeholder="输入或粘贴语音内容..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="text" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="text-title">标题</Label>
-              <Input id="text-title" placeholder="笔记标题" value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="text-content">内容</Label>
-              <Textarea
-                id="text-content"
-                placeholder="输入您的想法和灵感..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={6}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+          {/* Content */}
+          <div className="space-y-2">
+            <Label htmlFor="inbox-content" className="text-foreground">
+              {type === "voice" ? "文字内容（模拟语音转文字）" : "笔记内容"}
+            </Label>
+            <Textarea
+              id="inbox-content"
+              placeholder={type === "voice" 
+                ? "输入或粘贴语音内容，AI 将自动提取选题灵感..." 
+                : "输入您的想法和灵感，例如：今天和客户聊天发现一个有意思的话题..."
+              }
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={8}
+            />
+          </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            提交并提取
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {/* AI Preview */}
+          {content && (
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Sparkles className="h-4 w-4" />
+                AI 将自动提取
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• 选题灵感和延伸话题</p>
+                <p>• 关键观点和数据线索</p>
+                <p>• 可能的风险和注意事项</p>
+                <p>• 内容方向建议</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tips */}
+          <div className="p-4 rounded-xl bg-secondary/30 border border-border/30 space-y-2">
+            <div className="text-sm font-medium text-foreground">💡 使用场景</div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>• 灵感闪现时快速记录</p>
+              <p>• 和客户聊天后记录选题素材</p>
+              <p>• 看到好内容后的即时想法</p>
+              <p>• 日常思考和复盘记录</p>
+            </div>
+          </div>
+        </div>
+
+        <DrawerFooter className="border-t border-border/50 pt-4">
+          <div className="flex gap-3 w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="flex-1 border-border/50"
+            >
+              取消
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading} 
+              className="flex-1 btn-gradient border-0"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Zap className="mr-2 h-4 w-4" />
+              提交并提取
+            </Button>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   )
 }

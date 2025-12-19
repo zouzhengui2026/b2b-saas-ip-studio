@@ -52,7 +52,7 @@ export default function InboxPage() {
     return (
       <DashboardLayout>
         <PageHeader title="语音Inbox" breadcrumbs={[{ label: "语音Inbox" }]} />
-        <Card className="border-dashed">
+        <Card className="border-dashed border-border/30">
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">请先在顶部选择一个IP</p>
           </CardContent>
@@ -68,11 +68,11 @@ export default function InboxPage() {
         breadcrumbs={[{ label: "语音Inbox" }]}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setAddDialogOpen(true)}>
+            <Button variant="outline" onClick={() => setAddDialogOpen(true)} className="border-border/50">
               <Mic className="h-4 w-4 mr-2" />
               开始录音
             </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
+            <Button onClick={() => setAddDialogOpen(true)} className="btn-gradient border-0">
               <FileText className="h-4 w-4 mr-2" />
               文本记录
             </Button>
@@ -90,22 +90,30 @@ export default function InboxPage() {
         />
       ) : (
         <div className="space-y-4">
-          {inboxItems.map((item) => (
+          {inboxItems.map((item, index) => (
             <Link key={item.id} href={`/inbox/${item.id}`}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <Card 
+                className="hover:border-primary/50 transition-all cursor-pointer animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <CardTitle className="text-base flex items-center gap-2">
-                        {item.type === "voice" ? <Mic className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                        <div className={`p-1.5 rounded-lg ${item.type === "voice" ? "bg-cyan-500/20" : "bg-violet-500/20"}`}>
+                          {item.type === "voice" 
+                            ? <Mic className="h-4 w-4 text-cyan-400" /> 
+                            : <FileText className="h-4 w-4 text-violet-400" />
+                          }
+                        </div>
                         {item.title}
                       </CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <Badge variant={item.status === "pending" ? "secondary" : "outline"}>
+                      <CardDescription className="flex items-center gap-2 mt-2">
+                        <Badge variant={item.status === "pending" ? "warning" : "success"}>
                           {item.status === "pending" ? "待处理" : item.status === "processed" ? "已处理" : "已归档"}
                         </Badge>
                         {item.duration && (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             {formatDuration(item.duration)}
                           </span>
@@ -114,7 +122,12 @@ export default function InboxPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {item.status === "pending" && (
-                        <Button variant="outline" size="sm" onClick={(e) => handleMarkProcessed(item.id, e)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => handleMarkProcessed(item.id, e)}
+                          className="border-border/50"
+                        >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           标记已处理
                         </Button>
@@ -127,9 +140,9 @@ export default function InboxPage() {
                   <CardContent className="pt-0">
                     <p className="text-sm text-muted-foreground">{item.memoSummary}</p>
                     {item.extractedAssets?.topicSeeds && item.extractedAssets.topicSeeds.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="flex flex-wrap gap-1 mt-3">
                         {item.extractedAssets.topicSeeds.slice(0, 3).map((seed, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
+                          <Badge key={idx} variant="outline" className="text-xs border-border/50">
                             {seed}
                           </Badge>
                         ))}

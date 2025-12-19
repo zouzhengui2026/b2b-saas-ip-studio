@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { AppSidebar } from "./app-sidebar"
 import { AppTopbar } from "./app-topbar"
 import { useAppStore } from "@/lib/app-context"
@@ -15,7 +15,6 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { state } = useAppStore()
   const router = useRouter()
-  const pathname = usePathname()
 
   useEffect(() => {
     // 未登录时重定向到登录页
@@ -34,7 +33,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <AppTopbar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

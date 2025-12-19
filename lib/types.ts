@@ -363,6 +363,7 @@ export type AppAction =
   | { type: "ADD_WEEKLY_REPORT"; payload: WeeklyReport }
   // Team Members
   | { type: "ADD_TEAM_MEMBER"; payload: TeamMember }
+  | { type: "UPDATE_TEAM_MEMBER"; payload: TeamMember }
   | { type: "DELETE_TEAM_MEMBER"; payload: string }
   // Settings
   | { type: "UPDATE_SETTINGS"; payload: Settings }
