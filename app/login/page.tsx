@@ -103,7 +103,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center relative z-10">
         <div className="max-w-lg mx-auto">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[oklch(0.55_0.25_280)] to-[oklch(0.60_0.20_220)] flex items-center justify-center shadow-lg shadow-[oklch(0.65_0.22_280/0.3)]">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
@@ -113,12 +113,12 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-4xl font-bold mb-4 text-foreground animate-slide-up">
+          <h1 className="text-4xl font-bold mb-4 text-foreground">
             用AI陪你从0到1
             <br />
             <span className="text-gradient">打造个人IP</span>
           </h1>
-          <p className="text-lg mb-10 text-muted-foreground animate-slide-up delay-100">
+          <p className="text-lg mb-10 text-muted-foreground">
             一站式管理您的IP内容、获客线索和商业变现
           </p>
 
@@ -126,8 +126,7 @@ export default function LoginPage() {
             {features.map((feature, index) => (
               <div 
                 key={feature.title}
-                className="flex items-start gap-4 p-4 rounded-xl glass-card animate-slide-up hover-glow transition-all"
-                style={{ animationDelay: `${(index + 2) * 100}ms` }}
+                className="flex items-start gap-4 p-4 rounded-xl glass-card hover-glow transition-all"
               >
                 <div className={`p-2.5 rounded-lg bg-gradient-to-br ${feature.color} shadow-lg`}>
                   <feature.icon className="h-5 w-5 text-white" />
@@ -144,7 +143,7 @@ export default function LoginPage() {
 
       {/* Right Panel - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-        <Card className="w-full max-w-md glass-card border-border/50 animate-scale-in">
+        <Card className="w-full max-w-md glass-card border-border/50">
           <CardHeader className="text-center pb-2">
             {/* Mobile Logo */}
             <div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
