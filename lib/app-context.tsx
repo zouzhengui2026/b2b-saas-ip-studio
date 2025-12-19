@@ -1,10 +1,55 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useState, type ReactNode } from "react"
 import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
+
+// localStorage 持久化配置
+const STORAGE_KEY = "b2b-saas-app-state"
+const STORAGE_VERSION = "1.0"
+
+// 从 localStorage 加载状态
+function loadStateFromStorage(): AppState | null {
+  if (typeof window === "undefined") return null
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    // 版本检查，如果版本不匹配则返回 null 使用默认数据
+    if (parsed.version !== STORAGE_VERSION) return null
+    return parsed.state as AppState
+  } catch (error) {
+    console.warn("Failed to load state from localStorage:", error)
+    return null
+  }
+}
+
+// 保存状态到 localStorage
+function saveStateToStorage(state: AppState): void {
+  if (typeof window === "undefined") return
+  try {
+    const data = {
+      version: STORAGE_VERSION,
+      state,
+      savedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch (error) {
+    console.warn("Failed to save state to localStorage:", error)
+  }
+}
+
+// 清除 localStorage 中的状态
+function clearStorageState(): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch (error) {
+    console.warn("Failed to clear state from localStorage:", error)
+  }
+}
 
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -253,7 +298,29 @@ const AppContext = createContext<AppContextType | null>(null)
 
 // Provider Component
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialAppState)
+  // 使用延迟初始化，先尝试从 localStorage 加载
+  const [state, dispatch] = useReducer(appReducer, initialAppState, (initial) => {
+    // 服务端渲染时直接返回初始状态
+    if (typeof window === "undefined") return initial
+    // 客户端尝试从 localStorage 加载
+    const stored = loadStateFromStorage()
+    return stored || initial
+  })
+
+  // 用于标记是否已完成客户端初始化（处理 SSR hydration）
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // 客户端 hydration 完成后设置标记
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  // 监听状态变化，自动保存到 localStorage
+  useEffect(() => {
+    if (isHydrated) {
+      saveStateToStorage(state)
+    }
+  }, [state, isHydrated])
 
   const setCurrentOrg = useCallback((orgId: string) => {
     dispatch({ type: "SET_CURRENT_ORG", payload: orgId })
@@ -280,6 +347,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
+    clearStorageState() // 登出时清除本地存储
     dispatch({ type: "LOGOUT" })
   }, [])
 
