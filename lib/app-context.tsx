@@ -466,10 +466,68 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const generateScript = useCallback(
-    async (contentId: string, style?: string) => {
-      await sleep(800 + Math.random() * 400)
+    async (contentId: string, style?: string): Promise<{ success: boolean; error?: string }> => {
       const content = state.contents.find((c) => c.id === contentId)
-      if (!content) return
+      if (!content) return { success: false, error: "内容不存在" }
+
+      const persona = state.personas.find((p) => p.id === content.personaId)
+      const evidences = state.evidences
+        .filter((e) => content.evidenceIds.includes(e.id))
+        .map((e) => ({ title: e.title, description: e.description }))
+
+      try {
+        // 调用真实的 DeepSeek API
+        const response = await fetch("/api/ai/generate-script", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: content.title,
+            platform: content.platform,
+            topicCluster: content.topicCluster,
+            format: content.format,
+            style,
+            evidences,
+            personaName: persona?.name,
+            personaBio: persona?.bio,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok || !data.success) {
+          console.error("AI API Error:", data.error)
+          // 如果 API 失败，使用 fallback mock 数据
+          return await generateScriptFallback(contentId, style)
+        }
+
+        const updatedContent: Content = {
+          ...content,
+          script: {
+            hook: data.script.hook,
+            outline: data.script.outline,
+            fullScript: data.script.fullScript,
+            shootingNotes: data.script.shootingNotes,
+          },
+          updatedAt: new Date().toISOString(),
+        }
+
+        dispatch({ type: "UPDATE_CONTENT", payload: updatedContent })
+        return { success: true }
+      } catch (error) {
+        console.error("Generate script error:", error)
+        // 网络错误时使用 fallback
+        return await generateScriptFallback(contentId, style)
+      }
+    },
+    [state.contents, state.personas, state.evidences],
+  )
+
+  // Fallback: 当 API 不可用时使用本地 mock 生成
+  const generateScriptFallback = useCallback(
+    async (contentId: string, style?: string): Promise<{ success: boolean; error?: string }> => {
+      await sleep(500)
+      const content = state.contents.find((c) => c.id === contentId)
+      if (!content) return { success: false, error: "内容不存在" }
 
       const stylePrefix =
         style === "shorter"
@@ -483,9 +541,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const updatedContent: Content = {
         ...content,
         script: {
-          ...content.script,
           hook: `${stylePrefix}${content.script?.hook || content.title}`,
-          outline: content.script?.outline || ["开场引入", "核心观点", "案例说明", "总结行动"],
+          outline: ["开场引入", "核心观点", "案例说明", "总结行动"],
           fullScript: `${stylePrefix}大家好，今天来聊聊${content.title}。这个话题最近很多人关注...\n\n首先，我们来看第一个要点...\n\n其次...\n\n最后，总结一下今天的内容...`,
           shootingNotes: ["准备相关素材", "注意表情自然", "控制时长在3分钟内"],
         },
@@ -493,6 +550,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       dispatch({ type: "UPDATE_CONTENT", payload: updatedContent })
+      return { success: true, error: "AI 服务暂不可用，已使用本地模板" }
     },
     [state.contents],
   )

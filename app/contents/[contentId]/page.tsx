@@ -140,9 +140,18 @@ export default function ContentDetailPage() {
 
   const handleRegenerateScript = async (style?: string) => {
     setScriptLoading(true)
-    toast({ title: "重新生成", description: "正在生成脚本..." })
-    await generateScript(content.id, style)
-    toast({ title: "生成完成", description: "脚本已更新" })
+    toast({ title: "AI 生成中", description: "正在调用 DeepSeek 生成脚本..." })
+    const result = await generateScript(content.id, style)
+    if (result.success) {
+      if (result.error) {
+        // 使用了 fallback
+        toast({ title: "已生成", description: result.error, variant: "default" })
+      } else {
+        toast({ title: "✨ AI 生成完成", description: "脚本已由 DeepSeek AI 生成" })
+      }
+    } else {
+      toast({ title: "生成失败", description: result.error || "未知错误", variant: "destructive" })
+    }
     setScriptLoading(false)
   }
 
