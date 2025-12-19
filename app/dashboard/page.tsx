@@ -125,8 +125,7 @@ export default function DashboardPage() {
         {kpiCards.map((stat, index) => (
           <Card 
             key={stat.label} 
-            className="relative overflow-hidden animate-slide-up"
-            style={{ animationDelay: `${index * 50}ms` }}
+            className="relative overflow-hidden"
           >
             {/* Background glow */}
             <div className={`absolute inset-0 ${stat.bgGlow} opacity-50`} />
@@ -145,7 +144,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* This Week Todos */}
-        <Card className="animate-slide-up delay-200">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500">
@@ -210,7 +209,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top 3 Contents */}
-        <Card className="animate-slide-up delay-300">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500">
@@ -260,7 +259,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <Card className="animate-slide-up delay-400">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500">
@@ -308,7 +307,7 @@ export default function DashboardPage() {
 
       {/* Empty State for new IPs */}
       {ipContents.length === 0 && (
-        <div className="mt-8 animate-slide-up delay-500">
+        <div className="mt-8">
           <EmptyStateCard
             icon={FileText}
             title="开始您的内容创作"

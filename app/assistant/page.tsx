@@ -31,7 +31,7 @@ export default function AssistantPage() {
       <PageHeader title="智能助手" breadcrumbs={[{ label: "智能助手" }]} />
 
       {/* Hero Card */}
-      <Card className="mb-6 relative overflow-hidden animate-fade-in">
+      <Card className="mb-6 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.55_0.25_280/0.1)] to-[oklch(0.60_0.20_220/0.05)]" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-[oklch(0.65_0.22_280/0.1)] rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
@@ -78,7 +78,7 @@ export default function AssistantPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <div className="animate-slide-up delay-100">
+          <div>
             {todayTaskStatus === "onboarding" ? (
               <AssistantOnboarding onFinished={() => {}} />
             ) : (
@@ -87,7 +87,7 @@ export default function AssistantPage() {
           </div>
         </div>
         <div className="space-y-6">
-          <div className="animate-slide-up delay-200">
+          <div>
             <AssistantWeeklySummary />
           </div>
         </div>

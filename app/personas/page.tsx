@@ -138,7 +138,7 @@ export default function PersonasPage() {
             return (
               <Card
                 key={persona.id}
-                className={`hover:border-primary/50 transition-all animate-slide-up ${isCurrent ? "border-primary shadow-lg shadow-primary/10" : ""}`}
+                className={`hover:border-primary/50 transition-all ${isCurrent ? "border-primary shadow-lg shadow-primary/10" : ""}`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <CardHeader className="flex flex-row items-start gap-4">

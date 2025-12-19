@@ -93,7 +93,7 @@ export default function InboxPage() {
           {inboxItems.map((item, index) => (
             <Link key={item.id} href={`/inbox/${item.id}`}>
               <Card 
-                className="hover:border-primary/50 transition-all cursor-pointer animate-slide-up"
+                className="hover:border-primary/50 transition-all cursor-pointer"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <CardHeader>
