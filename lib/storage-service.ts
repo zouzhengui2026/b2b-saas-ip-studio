@@ -176,10 +176,8 @@ export interface StorageService {
 }
 
 export function createStorageService(): StorageService {
-  // 暂时禁用 Supabase 存储，等 RLS 配置好后再启用
-  // const useSupabase = isSupabaseConfigured()
-  const useSupabase = false
-  console.log("📦 存储模式: localStorage (Supabase 暂时禁用)")
+  // RLS 已禁用，启用 Supabase 云存储
+  const useSupabase = isSupabaseConfigured()
 
   return {
     getStorageType: () => (useSupabase ? "supabase" : "localStorage"),
