@@ -1,27 +1,41 @@
 "use client"
 
 import { supabase, isSupabaseConfigured } from "./supabase"
+import { createSupabaseBrowserClient } from "./supabase-browser"
 import type { AppState } from "./types"
 
 const STORAGE_KEY = "b2b-saas-app-state"
 const STORAGE_VERSION = "1.0"
 
-// 获取用户标识（简化版，使用邮箱或设备ID）
-function getUserId(state: AppState): string {
-  // 如果用户已登录，使用邮箱作为标识
-  if (state.currentUser?.email) {
-    return state.currentUser.email
+// 获取当前登录用户的 ID（使用 Supabase Auth）
+async function getAuthUserId(): Promise<string | null> {
+  try {
+    const supabaseClient = createSupabaseBrowserClient()
+    const { data: { user } } = await supabaseClient.auth.getUser()
+    return user?.id || null
+  } catch {
+    return null
   }
-  // 否则使用设备指纹（存储在 localStorage）
+}
+
+// 同步获取缓存的用户 ID（用于快速操作）
+function getCachedUserId(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("supabase-user-id")
+}
+
+// 缓存用户 ID 到 localStorage
+function cacheUserId(userId: string): void {
   if (typeof window !== "undefined") {
-    let deviceId = localStorage.getItem("device-id")
-    if (!deviceId) {
-      deviceId = `device-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      localStorage.setItem("device-id", deviceId)
-    }
-    return deviceId
+    localStorage.setItem("supabase-user-id", userId)
   }
-  return "anonymous"
+}
+
+// 清除缓存的用户 ID
+function clearCachedUserId(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("supabase-user-id")
+  }
 }
 
 // ============ Supabase 存储 ============
@@ -162,20 +176,29 @@ export function createStorageService(): StorageService {
     getStorageType: () => (useSupabase ? "supabase" : "localStorage"),
 
     load: async (initialState: AppState): Promise<AppState> => {
-      // 尝试 Supabase
+      // 尝试 Supabase（需要用户已登录）
       if (useSupabase) {
-        // 先尝试从 localStorage 获取用户信息以确定 userId
-        const localState = loadFromLocalStorage()
-        const userId = getUserId(localState || initialState)
-
-        const supabaseState = await loadFromSupabase(userId)
-        if (supabaseState) {
-          console.log("✅ 已从 Supabase 云端加载数据")
-          return supabaseState
+        const userId = await getAuthUserId()
+        
+        if (userId) {
+          // 缓存用户 ID 供后续使用
+          cacheUserId(userId)
+          
+          const supabaseState = await loadFromSupabase(userId)
+          if (supabaseState) {
+            console.log("✅ 已从 Supabase 云端加载数据", { userId: userId.slice(0, 8) + "..." })
+            // 同步到本地缓存
+            saveToLocalStorage(supabaseState)
+            return supabaseState
+          }
+          
+          // 用户已登录但云端没有数据 -> 新用户
+          console.log("👤 新用户，使用初始状态")
+          return initialState
         }
       }
 
-      // 降级到 localStorage
+      // 未登录或 Supabase 不可用 -> 使用 localStorage
       const localState = loadFromLocalStorage()
       if (localState) {
         console.log("📦 已从本地存储加载数据")
@@ -186,26 +209,30 @@ export function createStorageService(): StorageService {
     },
 
     save: async (state: AppState): Promise<void> => {
-      const userId = getUserId(state)
-
       // 始终保存到 localStorage（作为本地缓存）
       saveToLocalStorage(state)
 
-      // 如果 Supabase 可用，也保存到云端
+      // 如果 Supabase 可用且用户已登录，同步到云端
       if (useSupabase) {
-        const success = await saveToSupabase(userId, state)
-        if (success) {
-          console.log("☁️ 已同步到云端")
+        const userId = getCachedUserId() || await getAuthUserId()
+        
+        if (userId) {
+          cacheUserId(userId)
+          const success = await saveToSupabase(userId, state)
+          if (success) {
+            console.log("☁️ 已同步到云端")
+          }
         }
       }
     },
 
-    clear: async (state: AppState): Promise<void> => {
-      const userId = getUserId(state)
-
+    clear: async (_state: AppState): Promise<void> => {
+      const userId = getCachedUserId()
+      
       clearLocalStorage()
+      clearCachedUserId()
 
-      if (useSupabase) {
+      if (useSupabase && userId) {
         await clearSupabaseState(userId)
       }
     },
