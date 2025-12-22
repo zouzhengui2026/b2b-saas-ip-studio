@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppSidebar } from "./app-sidebar"
 import { AppTopbar } from "./app-topbar"
@@ -15,13 +15,29 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { state } = useAppStore()
   const router = useRouter()
+  
+  // 解决 Hydration 错误：等待客户端挂载完成
+  const [isMounted, setIsMounted] = useState(false)
+  
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     // 未登录时重定向到登录页
-    if (!state.isAuthenticated) {
+    if (isMounted && !state.isAuthenticated) {
       router.push("/login")
     }
-  }, [state.isAuthenticated, router])
+  }, [state.isAuthenticated, router, isMounted])
+
+  // 客户端未挂载时显示加载状态（避免 hydration 不匹配）
+  if (!isMounted) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   // 未登录时不渲染内容
   if (!state.isAuthenticated) {
