@@ -114,21 +114,24 @@ function loadFromLocalStorage(): AppState | null {
 
 // 同步加载 localStorage（用于快速初始化）
 export function loadFromLocalStorageSync(): AppState | null {
-  return loadFromLocalStorage()
+  const state = loadFromLocalStorage()
+  if (state) {
+    console.log("📦 同步加载本地存储", { personas: state.personas.length, contents: state.contents.length })
+  }
+  return state
 }
 
 function saveToLocalStorage(state: AppState): void {
   if (typeof window === "undefined") return
 
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        version: STORAGE_VERSION,
-        state,
-        savedAt: new Date().toISOString(),
-      })
-    )
+    const data = {
+      version: STORAGE_VERSION,
+      state,
+      savedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+    console.log("💾 已保存到本地存储", { personas: state.personas.length, contents: state.contents.length })
   } catch (error) {
     console.warn("Failed to save to localStorage:", error)
   }
