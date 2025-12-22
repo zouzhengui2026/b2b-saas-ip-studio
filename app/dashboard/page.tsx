@@ -28,12 +28,12 @@ import { platformNames } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
+  // ========== 所有 Hooks 必须在最前面，不能在条件返回之后 ==========
   const { state, currentPersona, isLoading } = useAppStore()
   const router = useRouter()
   const [addInboxOpen, setAddInboxOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
 
-  // 所有 hooks 必须在条件返回之前调用
   const ipContents = useMemo(
     () => state.contents.filter((c) => c.personaId === state.currentIpId),
     [state.contents, state.currentIpId],
@@ -44,47 +44,32 @@ export default function DashboardPage() {
     [state.leads, state.currentIpId],
   )
 
-  // 新用户检查：没有组织时自动跳转到 onboarding
-  useEffect(() => {
-    if (!isLoading && state.orgs.length === 0) {
-      router.push("/onboarding")
-    }
-  }, [isLoading, state.orgs.length, router])
-
-  // KPI calculations
-  const validLeads = ipLeads.filter((l) => l.status !== "lost").length
-  const appointments = ipLeads.filter((l) => l.status === "appointment" || l.status === "won").length
-  const deals = ipLeads.filter((l) => l.status === "won").length
-  const publishedCount = ipContents.filter((c) => c.status === "published").length
-
-  // Todos
-  const qaFixContents = ipContents.filter((c) => c.status === "qa_fix")
-  const approvedContents = ipContents.filter((c) => c.status === "approved")
-  const needMetricsContents = ipContents.filter(
-    (c) => c.status === "published" && (!c.metrics?.inquiries || c.metrics.inquiries === 0),
-  )
-
-  // 加载中或需要跳转时显示加载状态
-  if (isLoading || state.orgs.length === 0) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">加载中...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  // Top 3 contents by inquiries
   const top3Contents = useMemo(() => {
     return [...ipContents]
       .filter((c) => c.status === "published" && c.metrics?.inquiries)
       .sort((a, b) => (b.metrics?.inquiries || 0) - (a.metrics?.inquiries || 0))
       .slice(0, 3)
   }, [ipContents])
+
+  useEffect(() => {
+    if (!isLoading && state.orgs.length === 0) {
+      router.push("/onboarding")
+    }
+  }, [isLoading, state.orgs.length, router])
+
+  // ========== 普通计算 ==========
+  const validLeads = ipLeads.filter((l) => l.status !== "lost").length
+  const appointments = ipLeads.filter((l) => l.status === "appointment" || l.status === "won").length
+  const deals = ipLeads.filter((l) => l.status === "won").length
+  const publishedCount = ipContents.filter((c) => c.status === "published").length
+
+  const qaFixContents = ipContents.filter((c) => c.status === "qa_fix")
+  const approvedContents = ipContents.filter((c) => c.status === "approved")
+  const needMetricsContents = ipContents.filter(
+    (c) => c.status === "published" && (!c.metrics?.inquiries || c.metrics.inquiries === 0),
+  )
+
+  const hasTodos = qaFixContents.length > 0 || approvedContents.length > 0 || needMetricsContents.length > 0
 
   const kpiCards = [
     { 
@@ -117,6 +102,20 @@ export default function DashboardPage() {
     },
   ]
 
+  // ========== 条件返回（所有 hooks 已在上面调用完毕）==========
+  if (isLoading || state.orgs.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
   if (!state.currentIpId) {
     return (
       <DashboardLayout>
@@ -130,8 +129,7 @@ export default function DashboardPage() {
     )
   }
 
-  const hasTodos = qaFixContents.length > 0 || approvedContents.length > 0 || needMetricsContents.length > 0
-
+  // ========== 主要渲染 ==========
   return (
     <DashboardLayout>
       <PageHeader title="Dashboard" breadcrumbs={[{ label: "Dashboard" }]} />
