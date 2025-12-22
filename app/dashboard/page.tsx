@@ -33,12 +33,36 @@ export default function DashboardPage() {
   const [addInboxOpen, setAddInboxOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
 
+  // 所有 hooks 必须在条件返回之前调用
+  const ipContents = useMemo(
+    () => state.contents.filter((c) => c.personaId === state.currentIpId),
+    [state.contents, state.currentIpId],
+  )
+
+  const ipLeads = useMemo(
+    () => state.leads.filter((l) => l.personaId === state.currentIpId),
+    [state.leads, state.currentIpId],
+  )
+
   // 新用户检查：没有组织时自动跳转到 onboarding
   useEffect(() => {
     if (!isLoading && state.orgs.length === 0) {
       router.push("/onboarding")
     }
   }, [isLoading, state.orgs.length, router])
+
+  // KPI calculations
+  const validLeads = ipLeads.filter((l) => l.status !== "lost").length
+  const appointments = ipLeads.filter((l) => l.status === "appointment" || l.status === "won").length
+  const deals = ipLeads.filter((l) => l.status === "won").length
+  const publishedCount = ipContents.filter((c) => c.status === "published").length
+
+  // Todos
+  const qaFixContents = ipContents.filter((c) => c.status === "qa_fix")
+  const approvedContents = ipContents.filter((c) => c.status === "approved")
+  const needMetricsContents = ipContents.filter(
+    (c) => c.status === "published" && (!c.metrics?.inquiries || c.metrics.inquiries === 0),
+  )
 
   // 加载中或需要跳转时显示加载状态
   if (isLoading || state.orgs.length === 0) {
@@ -53,29 +77,6 @@ export default function DashboardPage() {
       </DashboardLayout>
     )
   }
-
-  const ipContents = useMemo(
-    () => state.contents.filter((c) => c.personaId === state.currentIpId),
-    [state.contents, state.currentIpId],
-  )
-
-  const ipLeads = useMemo(
-    () => state.leads.filter((l) => l.personaId === state.currentIpId),
-    [state.leads, state.currentIpId],
-  )
-
-  // KPI calculations
-  const validLeads = ipLeads.filter((l) => l.status !== "lost").length
-  const appointments = ipLeads.filter((l) => l.status === "appointment" || l.status === "won").length
-  const deals = ipLeads.filter((l) => l.status === "won").length
-  const publishedCount = ipContents.filter((c) => c.status === "published").length
-
-  // Todos
-  const qaFixContents = ipContents.filter((c) => c.status === "qa_fix")
-  const approvedContents = ipContents.filter((c) => c.status === "approved")
-  const needMetricsContents = ipContents.filter(
-    (c) => c.status === "published" && (!c.metrics?.inquiries || c.metrics.inquiries === 0),
-  )
 
   // Top 3 contents by inquiries
   const top3Contents = useMemo(() => {
