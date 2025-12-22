@@ -88,7 +88,13 @@ async function saveToSupabase(userId: string, state: AppState): Promise<boolean>
       )
 
     if (error) {
-      console.error("Supabase save error:", error)
+      console.error("Supabase save error:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        userId: userId?.slice(0, 8) + "..."
+      })
       return false
     }
 
@@ -170,7 +176,10 @@ export interface StorageService {
 }
 
 export function createStorageService(): StorageService {
-  const useSupabase = isSupabaseConfigured()
+  // 暂时禁用 Supabase 存储，等 RLS 配置好后再启用
+  // const useSupabase = isSupabaseConfigured()
+  const useSupabase = false
+  console.log("📦 存储模式: localStorage (Supabase 暂时禁用)")
 
   return {
     getStorageType: () => (useSupabase ? "supabase" : "localStorage"),
