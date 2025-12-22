@@ -30,13 +30,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       }
     }
     case "LOGOUT":
+      // 只清除登录状态，保留业务数据（IP、内容等）
       return {
-        ...initialAppState,
+        ...state,
         isAuthenticated: false,
         currentUser: null,
         currentOrgId: null,
         currentIpId: null,
-        weeklyDraftSources: [],
       }
     // Org CRUD
     case "ADD_ORG":
@@ -241,7 +241,7 @@ interface AppContextType {
   setCurrentOrg: (orgId: string) => void
   setCurrentIp: (ipId: string | null) => void
   login: (email: string, password: string) => Promise<boolean>
-  logout: () => Promise<void>
+  logout: () => void
   // Content Actions
   setContentStatus: (id: string, status: ContentStatus) => void
   updateContentMetrics: (id: string, metrics: ContentMetrics) => void
@@ -348,10 +348,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.users],
   )
 
-  const logout = useCallback(async () => {
-    await storageServiceRef.current.clear(state) // 登出时清除存储
+  const logout = useCallback(() => {
+    // 退出登录只清除登录状态，不清除业务数据
     dispatch({ type: "LOGOUT" })
-  }, [state])
+  }, [])
 
   const setContentStatus = useCallback((id: string, status: ContentStatus) => {
     dispatch({ type: "SET_CONTENT_STATUS", payload: { id, status } })
