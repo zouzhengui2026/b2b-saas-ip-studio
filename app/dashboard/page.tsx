@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -28,10 +28,31 @@ import { platformNames } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
-  const { state, currentPersona } = useAppStore()
+  const { state, currentPersona, isLoading } = useAppStore()
   const router = useRouter()
   const [addInboxOpen, setAddInboxOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
+
+  // 新用户检查：没有组织时自动跳转到 onboarding
+  useEffect(() => {
+    if (!isLoading && state.orgs.length === 0) {
+      router.push("/onboarding")
+    }
+  }, [isLoading, state.orgs.length, router])
+
+  // 加载中或需要跳转时显示加载状态
+  if (isLoading || state.orgs.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   const ipContents = useMemo(
     () => state.contents.filter((c) => c.personaId === state.currentIpId),

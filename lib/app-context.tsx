@@ -267,39 +267,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return cached || initial
   })
   
-  // 不再需要 isLoading 状态，因为使用同步初始化
-  const [isLoading] = useState(false)
+  // 加载状态：等待云端数据同步完成
+  const [isLoading, setIsLoading] = useState(true)
   const [isHydrated, setIsHydrated] = useState(false)
   const storageServiceRef = useRef(getStorageService())
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // 客户端初始化：后台从 Supabase 同步（如果配置了的话）
+  // 客户端初始化：从 Supabase 同步数据
   useEffect(() => {
     const syncFromCloud = async () => {
       try {
         const storage = storageServiceRef.current
         
-        // 如果是 Supabase 存储，尝试从云端同步最新数据
-        if (storage.getStorageType() === "supabase") {
-          const cloudState = await storage.load(initialAppState)
-          
-          // 只有云端数据比本地新时才更新
-          if (cloudState && cloudState !== initialAppState) {
-            dispatch({ type: "HYDRATE_STATE", payload: cloudState })
-            console.log("☁️ 已从云端同步最新数据")
-          }
-        }
+        // 从存储加载数据（Supabase 或 localStorage）
+        const loadedState = await storage.load(initialAppState)
         
-        console.log(`📊 存储类型: ${storage.getStorageType()}`)
+        if (loadedState && loadedState !== initialAppState) {
+          dispatch({ type: "HYDRATE_STATE", payload: loadedState })
+          console.log("✅ 已加载用户数据", { 
+            orgs: loadedState.orgs.length,
+            storage: storage.getStorageType()
+          })
+        } else {
+          console.log("📭 用户数据为空（新用户）")
+        }
       } catch (error) {
-        console.error("Failed to sync from cloud:", error)
+        console.error("Failed to load data:", error)
       } finally {
         setIsHydrated(true)
+        setIsLoading(false)
       }
     }
 
-    // 标记已初始化，然后后台同步
-    setIsHydrated(true)
     syncFromCloud()
   }, [])
 

@@ -614,8 +614,31 @@ export const mockSettings: Settings[] = [
   },
 ]
 
-// 初始状态
-export const initialAppState: AppState = {
+// 空白初始状态 - 新用户从这里开始
+export const emptyAppState: AppState = {
+  currentOrgId: null,
+  currentIpId: null,
+  isAuthenticated: false,
+  currentUser: null,
+  orgs: [],
+  users: [],
+  personas: [],
+  epochs: [],
+  evidences: [],
+  accounts: [],
+  references: [],
+  contents: [],
+  leads: [],
+  inboxItems: [],
+  weeklyReports: [],
+  teamMembers: [],
+  settings: [],
+  weeklyDraftSources: [],
+  assistantStage: "not_started",
+}
+
+// Mock 初始状态 - 仅用于开发演示
+export const mockAppState: AppState = {
   currentOrgId: null,
   currentIpId: null,
   isAuthenticated: false,
@@ -636,3 +659,6 @@ export const initialAppState: AppState = {
   weeklyDraftSources: [],
   assistantStage: "not_started",
 }
+
+// 默认使用空白状态（新用户）
+export const initialAppState = emptyAppState

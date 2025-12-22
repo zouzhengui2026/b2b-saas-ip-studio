@@ -140,13 +140,7 @@ export default function OnboardingPage() {
       dispatch({ type: "ADD_EVIDENCE", payload: newEvidence })
     })
 
-    // Update user org list and login
-    const user = state.users[0]
-    if (user) {
-      const updatedUser = { ...user, orgIds: [...user.orgIds, orgId] }
-      dispatch({ type: "LOGIN", payload: updatedUser })
-    }
-
+    // 设置当前组织和 IP
     dispatch({ type: "SET_CURRENT_ORG", payload: orgId })
     dispatch({ type: "SET_CURRENT_IP", payload: ipId })
 
