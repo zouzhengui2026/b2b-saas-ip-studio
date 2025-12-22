@@ -1,6 +1,7 @@
 "use client"
 
 import { useAppStore } from "@/lib/app-context"
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,14 +19,16 @@ import { AddInboxDialog } from "./add-inbox-dialog"
 import { AddLeadDrawer } from "./add-lead-dialog"
 
 export function AppTopbar() {
-  const { state, currentOrg, currentPersona, currentOrgPersonas, setCurrentOrg, setCurrentIp, logout } = useAppStore()
+  const { state, currentOrg, currentPersona, currentOrgPersonas, setCurrentOrg, setCurrentIp } = useAppStore()
   const router = useRouter()
   const [showInboxDialog, setShowInboxDialog] = useState(false)
   const [showLeadDialog, setShowLeadDialog] = useState(false)
+  const supabase = createSupabaseBrowserClient()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     router.push("/login")
+    router.refresh()
   }
 
   return (
