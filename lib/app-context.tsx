@@ -1,55 +1,11 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useState, useRef, type ReactNode } from "react"
 import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
-
-// localStorage 持久化配置
-const STORAGE_KEY = "b2b-saas-app-state"
-const STORAGE_VERSION = "1.0"
-
-// 从 localStorage 加载状态
-function loadStateFromStorage(): AppState | null {
-  if (typeof window === "undefined") return null
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return null
-    const parsed = JSON.parse(stored)
-    // 版本检查，如果版本不匹配则返回 null 使用默认数据
-    if (parsed.version !== STORAGE_VERSION) return null
-    return parsed.state as AppState
-  } catch (error) {
-    console.warn("Failed to load state from localStorage:", error)
-    return null
-  }
-}
-
-// 保存状态到 localStorage
-function saveStateToStorage(state: AppState): void {
-  if (typeof window === "undefined") return
-  try {
-    const data = {
-      version: STORAGE_VERSION,
-      state,
-      savedAt: new Date().toISOString(),
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch (error) {
-    console.warn("Failed to save state to localStorage:", error)
-  }
-}
-
-// 清除 localStorage 中的状态
-function clearStorageState(): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch (error) {
-    console.warn("Failed to clear state from localStorage:", error)
-  }
-}
+import { getStorageService } from "./storage-service"
 
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -266,6 +222,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, weeklyDraftSources: [] }
     case "SET_ASSISTANT_STAGE":
       return { ...state, assistantStage: action.payload }
+    // 用于从存储恢复完整状态
+    case "HYDRATE_STATE":
+      return { ...(action as any).payload }
     default:
       return state
   }
@@ -275,17 +234,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState
   dispatch: React.Dispatch<AppAction>
+  // Loading state
+  isLoading: boolean
+  storageType: "supabase" | "localStorage"
   // Actions
   setCurrentOrg: (orgId: string) => void
   setCurrentIp: (ipId: string | null) => void
   login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
+  logout: () => Promise<void>
   // Content Actions
   setContentStatus: (id: string, status: ContentStatus) => void
   updateContentMetrics: (id: string, metrics: ContentMetrics) => void
   runQa: (contentId: string) => Promise<QaResult>
   generatePublishPack: (contentId: string) => Promise<PublishPack>
-  generateScript: (contentId: string, style?: string) => Promise<void>
+  generateScript: (contentId: string, style?: string) => Promise<{ success: boolean; error?: string }>
   // Computed
   currentOrg: (typeof initialAppState.orgs)[0] | undefined
   currentPersona: (typeof initialAppState.personas)[0] | undefined
@@ -298,27 +260,62 @@ const AppContext = createContext<AppContextType | null>(null)
 
 // Provider Component
 export function AppProvider({ children }: { children: ReactNode }) {
-  // 使用延迟初始化，先尝试从 localStorage 加载
-  const [state, dispatch] = useReducer(appReducer, initialAppState, (initial) => {
-    // 服务端渲染时直接返回初始状态
-    if (typeof window === "undefined") return initial
-    // 客户端尝试从 localStorage 加载
-    const stored = loadStateFromStorage()
-    return stored || initial
-  })
-
-  // 用于标记是否已完成客户端初始化（处理 SSR hydration）
+  const [state, dispatch] = useReducer(appReducer, initialAppState)
+  const [isLoading, setIsLoading] = useState(true)
   const [isHydrated, setIsHydrated] = useState(false)
+  const storageServiceRef = useRef(getStorageService())
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // 客户端 hydration 完成后设置标记
+  // 客户端初始化：从存储加载状态
   useEffect(() => {
-    setIsHydrated(true)
+    const loadState = async () => {
+      try {
+        const storage = storageServiceRef.current
+        const loadedState = await storage.load(initialAppState)
+        
+        // 使用 HYDRATE action 来设置完整状态
+        if (loadedState !== initialAppState) {
+          // 模拟一个完整的状态替换
+          Object.keys(loadedState).forEach((key) => {
+            const k = key as keyof AppState
+            if (k === "isAuthenticated" && loadedState.isAuthenticated && loadedState.currentUser) {
+              dispatch({ type: "LOGIN", payload: loadedState.currentUser })
+            }
+          })
+          // 直接替换整个状态
+          dispatch({ type: "HYDRATE_STATE", payload: loadedState } as any)
+        }
+        
+        console.log(`📊 存储类型: ${storage.getStorageType()}`)
+      } catch (error) {
+        console.error("Failed to load state:", error)
+      } finally {
+        setIsLoading(false)
+        setIsHydrated(true)
+      }
+    }
+
+    loadState()
   }, [])
 
-  // 监听状态变化，自动保存到 localStorage
+  // 监听状态变化，防抖保存到存储
   useEffect(() => {
-    if (isHydrated) {
-      saveStateToStorage(state)
+    if (!isHydrated) return
+
+    // 清除之前的定时器
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // 防抖：500ms 后保存
+    saveTimeoutRef.current = setTimeout(() => {
+      storageServiceRef.current.save(state)
+    }, 500)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
     }
   }, [state, isHydrated])
 
@@ -346,10 +343,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.users],
   )
 
-  const logout = useCallback(() => {
-    clearStorageState() // 登出时清除本地存储
+  const logout = useCallback(async () => {
+    await storageServiceRef.current.clear(state) // 登出时清除存储
     dispatch({ type: "LOGOUT" })
-  }, [])
+  }, [state])
 
   const setContentStatus = useCallback((id: string, status: ContentStatus) => {
     dispatch({ type: "SET_CONTENT_STATUS", payload: { id, status } })
@@ -584,6 +581,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value: AppContextType = {
     state,
     dispatch,
+    isLoading,
+    storageType: storageServiceRef.current.getStorageType(),
     setCurrentOrg,
     setCurrentIp,
     login,
@@ -598,6 +597,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     currentOrgPersonas,
     currentEpoch,
     currentSettings,
+  }
+
+  // 显示加载状态
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">加载数据中...</p>
+        </div>
+      </div>
+    )
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
