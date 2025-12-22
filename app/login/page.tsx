@@ -78,27 +78,32 @@ export default function LoginPage() {
     }
     setLoading(true)
     
-    const { error } = await supabase.auth.signUp({
+    // 不等待邮件发送完成，立即返回给用户
+    // 邮件在后台发送，用户体验更好
+    supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
       },
+    }).then(({ error }) => {
+      if (error) {
+        toast({ 
+          title: "注册失败", 
+          description: error.message, 
+          variant: "destructive" 
+        })
+      }
     })
 
-    if (error) {
-      toast({ 
-        title: "注册失败", 
-        description: error.message, 
-        variant: "destructive" 
-      })
-    } else {
-      toast({ 
-        title: "注册成功", 
-        description: "请查收验证邮件，点击链接完成注册" 
-      })
-      setActiveTab("login")
-    }
+    // 立即显示成功提示，不等待
+    toast({ 
+      title: "📧 验证邮件已发送", 
+      description: `请查收 ${email} 的邮件，点击链接完成注册`,
+    })
+    setActiveTab("login")
+    setPassword("")
+    setConfirmPassword("")
     setLoading(false)
   }
 
