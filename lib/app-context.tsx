@@ -5,7 +5,7 @@ import { createContext, useContext, useReducer, useCallback, useMemo, useEffect,
 import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
-import { getStorageService } from "./storage-service"
+import { getStorageService, loadFromLocalStorageSync } from "./storage-service"
 
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -224,7 +224,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, assistantStage: action.payload }
     // 用于从存储恢复完整状态
     case "HYDRATE_STATE":
-      return { ...(action as any).payload }
+      return { ...action.payload }
     default:
       return state
   }
@@ -260,42 +260,47 @@ const AppContext = createContext<AppContextType | null>(null)
 
 // Provider Component
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialAppState)
-  const [isLoading, setIsLoading] = useState(true)
+  // 同步初始化：优先从 localStorage 快速加载，避免闪烁
+  const [state, dispatch] = useReducer(appReducer, initialAppState, (initial) => {
+    if (typeof window === "undefined") return initial
+    const cached = loadFromLocalStorageSync()
+    return cached || initial
+  })
+  
+  // 不再需要 isLoading 状态，因为使用同步初始化
+  const [isLoading] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const storageServiceRef = useRef(getStorageService())
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // 客户端初始化：从存储加载状态
+  // 客户端初始化：后台从 Supabase 同步（如果配置了的话）
   useEffect(() => {
-    const loadState = async () => {
+    const syncFromCloud = async () => {
       try {
         const storage = storageServiceRef.current
-        const loadedState = await storage.load(initialAppState)
         
-        // 使用 HYDRATE action 来设置完整状态
-        if (loadedState !== initialAppState) {
-          // 模拟一个完整的状态替换
-          Object.keys(loadedState).forEach((key) => {
-            const k = key as keyof AppState
-            if (k === "isAuthenticated" && loadedState.isAuthenticated && loadedState.currentUser) {
-              dispatch({ type: "LOGIN", payload: loadedState.currentUser })
-            }
-          })
-          // 直接替换整个状态
-          dispatch({ type: "HYDRATE_STATE", payload: loadedState } as any)
+        // 如果是 Supabase 存储，尝试从云端同步最新数据
+        if (storage.getStorageType() === "supabase") {
+          const cloudState = await storage.load(initialAppState)
+          
+          // 只有云端数据比本地新时才更新
+          if (cloudState && cloudState !== initialAppState) {
+            dispatch({ type: "HYDRATE_STATE", payload: cloudState })
+            console.log("☁️ 已从云端同步最新数据")
+          }
         }
         
         console.log(`📊 存储类型: ${storage.getStorageType()}`)
       } catch (error) {
-        console.error("Failed to load state:", error)
+        console.error("Failed to sync from cloud:", error)
       } finally {
-        setIsLoading(false)
         setIsHydrated(true)
       }
     }
 
-    loadState()
+    // 标记已初始化，然后后台同步
+    setIsHydrated(true)
+    syncFromCloud()
   }, [])
 
   // 监听状态变化，防抖保存到存储
@@ -597,18 +602,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     currentOrgPersonas,
     currentEpoch,
     currentSettings,
-  }
-
-  // 显示加载状态
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">加载数据中...</p>
-        </div>
-      </div>
-    )
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

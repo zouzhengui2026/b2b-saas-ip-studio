@@ -112,6 +112,11 @@ function loadFromLocalStorage(): AppState | null {
   }
 }
 
+// 同步加载 localStorage（用于快速初始化）
+export function loadFromLocalStorageSync(): AppState | null {
+  return loadFromLocalStorage()
+}
+
 function saveToLocalStorage(state: AppState): void {
   if (typeof window === "undefined") return
 

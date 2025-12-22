@@ -374,3 +374,5 @@ export type AppAction =
   | { type: "CLEAR_DRAFT_SOURCES" }
   // Assistant
   | { type: "SET_ASSISTANT_STAGE"; payload: AppState["assistantStage"] }
+  // Hydration (从存储恢复状态)
+  | { type: "HYDRATE_STATE"; payload: AppState }
