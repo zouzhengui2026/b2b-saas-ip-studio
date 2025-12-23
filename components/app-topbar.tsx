@@ -161,6 +161,18 @@ export function AppTopbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/50" />
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const sup = createSupabaseBrowserClient()
+                  await sup.auth.signOut()
+                } catch (e) {}
+                // navigate to login to force re-login
+                router.push("/login")
+                router.refresh()
+              }} className="py-2.5">
+                刷新会话
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border/50" />
               <DropdownMenuItem onClick={() => router.push("/settings")} className="py-2.5">
                 个人信息
               </DropdownMenuItem>

@@ -118,16 +118,12 @@ async function saveToSupabase(userId: string, state: AppState): Promise<boolean>
           try {
             const code = err?.code || err?.status
             if (code === 401 || code === "401" || code === 42501 || code === "42501") {
+              // 不在此处强制 signOut，改为设置一个本地标记并提示用户重新登录
               try {
-                const client = createSupabaseBrowserClient()
-                // sign out to clear invalid session
-                await client.auth.signOut()
-                // clear cached ids
-                try { localStorage.removeItem("supabase-user-id") } catch {}
-                try { localStorage.removeItem("b2b-saas-app-state") } catch {}
-                console.warn("Supabase: cleared local session due to RLS/401 error. Please re-login.")
+                localStorage.setItem("supabase-session-invalid", "1")
+                console.warn("Supabase: session appears invalid (401/42501). Please re-login to recover your session.")
               } catch (e) {
-                // ignore signout errors
+                // ignore
               }
             }
           } catch (e) {}
