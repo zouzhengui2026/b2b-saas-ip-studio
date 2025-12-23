@@ -55,6 +55,14 @@ export default function LoginPage() {
         variant: "destructive" 
       })
     } else {
+      // 清除本地可能残留的演示/旧状态，避免不同账号看到相同 mock 数据
+      try {
+        localStorage.removeItem("b2b-saas-app-state")
+        localStorage.removeItem("supabase-user-id")
+        localStorage.removeItem("device-id")
+      } catch (e) {
+        // ignore
+      }
       toast({ title: "登录成功", description: "欢迎回来！" })
       router.push("/dashboard")
       router.refresh()
