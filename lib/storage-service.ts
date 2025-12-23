@@ -73,41 +73,57 @@ async function loadFromSupabase(userId: string): Promise<AppState | null> {
 
 async function saveToSupabase(userId: string, state: AppState): Promise<boolean> {
   if (!supabase) return false
+  // 将 upsert 请求包装重试逻辑（指数退避）
+  const payload = {
+    user_id: userId,
+    state,
+    version: STORAGE_VERSION,
+    updated_at: new Date().toISOString(),
+  }
 
-  try {
-    const { error } = await supabase
-      .from("user_app_state")
-      .upsert(
-        {
-          user_id: userId,
-          state,
-          version: STORAGE_VERSION,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      )
+  const maxAttempts = 3
+  let attempt = 0
+  let delayMs = 300
 
-    if (error) {
-      // 打印完整错误对象，方便调试
+  while (attempt < maxAttempts) {
+    try {
+      // 记录请求体快照，便于排查（不记录完整 state 内容以免泄露）
       try {
-        console.error("Supabase save error (full):", error)
-        console.error("Supabase save error (summary):", {
-          message: error?.message,
-          code: error?.code,
-          details: error?.details,
-          hint: error?.hint,
-          userId: userId ? (userId.slice(0, 8) + "...") : null,
-        })
-      } catch (e) {
-        console.error("Supabase save error (could not stringify):", error)
-      }
-      return false
-    }
+        console.log("Supabase upsert attempt", { attempt: attempt + 1, userId: userId ? userId.slice(0, 8) + "..." : null })
+      } catch {}
 
-    return true
-  } catch (error) {
-    console.error("Failed to save to Supabase:", error)
-    return false
+      const { data, error, status } = await supabase
+        .from("user_app_state")
+        .upsert(payload, { onConflict: "user_id" })
+
+      if (error) {
+        // 如果 RLS 或权限问题，抛出以便进入重试/最终失败逻辑
+        throw error
+      }
+
+      // 成功
+      try {
+        console.log("Supabase upsert success", { status, userId: userId ? userId.slice(0, 8) + "..." : null })
+      } catch {}
+      return true
+    } catch (err: any) {
+      // 打印详细错误帮助定位
+      try {
+        console.error("Supabase upsert failed on attempt", attempt + 1, err)
+      } catch {}
+
+      attempt++
+      if (attempt >= maxAttempts) {
+        try {
+          console.error("Supabase save failed after max attempts", { userId: userId ? userId.slice(0, 8) + "..." : null })
+        } catch {}
+        return false
+      }
+
+      // 指数退避等待
+      await new Promise((r) => setTimeout(r, delayMs))
+      delayMs *= 2
+    }
   }
 }
 
