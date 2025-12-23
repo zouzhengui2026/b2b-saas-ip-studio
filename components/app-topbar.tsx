@@ -75,7 +75,7 @@ export function AppTopbar() {
                 className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
               >
                 <User2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{currentPersona?.name || "选择IP"}</span>
+                <span className="text-foreground">{isMounted ? (currentPersona?.name || "选择IP") : "选择IP"}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>

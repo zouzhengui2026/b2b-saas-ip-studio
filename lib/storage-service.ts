@@ -88,13 +88,19 @@ async function saveToSupabase(userId: string, state: AppState): Promise<boolean>
       )
 
     if (error) {
-      console.error("Supabase save error:", {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        userId: userId?.slice(0, 8) + "..."
-      })
+      // 打印完整错误对象，方便调试
+      try {
+        console.error("Supabase save error (full):", error)
+        console.error("Supabase save error (summary):", {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          userId: userId ? (userId.slice(0, 8) + "...") : null,
+        })
+      } catch (e) {
+        console.error("Supabase save error (could not stringify):", error)
+      }
       return false
     }
 
