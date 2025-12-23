@@ -114,6 +114,23 @@ async function saveToSupabase(userId: string, state: AppState): Promise<boolean>
 
       attempt++
       if (attempt >= maxAttempts) {
+          // 如果是权限/行级安全错误，尝试主动清理本地 session，提示用户重新登录
+          try {
+            const code = err?.code || err?.status
+            if (code === 401 || code === "401" || code === 42501 || code === "42501") {
+              try {
+                const client = createSupabaseBrowserClient()
+                // sign out to clear invalid session
+                await client.auth.signOut()
+                // clear cached ids
+                try { localStorage.removeItem("supabase-user-id") } catch {}
+                try { localStorage.removeItem("b2b-saas-app-state") } catch {}
+                console.warn("Supabase: cleared local session due to RLS/401 error. Please re-login.")
+              } catch (e) {
+                // ignore signout errors
+              }
+            }
+          } catch (e) {}
         try {
           console.error("Supabase save failed after max attempts", { userId: userId ? userId.slice(0, 8) + "..." : null })
         } catch {}
