@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Building2, ChevronDown, User2, Zap, BookmarkPlus, Sparkles, Mic, UserPlus, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AddInboxDialog } from "./add-inbox-dialog"
 import { AddLeadDrawer } from "./add-lead-dialog"
 
@@ -30,6 +30,11 @@ export function AppTopbar() {
     router.push("/login")
     router.refresh()
   }
+  // 避免 SSR 和客户端文本不一致：只有客户端挂载后显示组织名称
+  const [isMounted, setIsMounted] = useState(false)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   return (
     <>
@@ -43,7 +48,7 @@ export function AppTopbar() {
                 className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
               >
                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{currentOrg?.name || "选择组织"}</span>
+                <span className="text-foreground">{isMounted ? (currentOrg?.name || "选择组织") : "选择组织"}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>

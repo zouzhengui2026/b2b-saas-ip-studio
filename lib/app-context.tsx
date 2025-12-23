@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useState, useRef, type ReactNode } from "react"
+import { useToast } from "@/hooks/use-toast"
 import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
@@ -302,7 +303,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     syncFromCloud()
   }, [])
 
-  // 监听状态变化，防抖保存到存储
+  const { toast } = useToast()
+
+  // 监听状态变化，防抖保存到存储（捕获云端失败并提示）
   useEffect(() => {
     if (!isHydrated) return
 
@@ -312,8 +315,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // 防抖：500ms 后保存
-    saveTimeoutRef.current = setTimeout(() => {
-      storageServiceRef.current.save(state)
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const success = await storageServiceRef.current.save(state)
+        if (!success) {
+          toast({
+            title: "同步失败",
+            description: "保存到云端失败，数据已保存在本地，请检查网络或稍后重试",
+            variant: "destructive",
+          })
+        }
+      } catch (e) {
+        toast({
+          title: "同步异常",
+          description: "尝试保存到云端时发生错误，已保存在本地",
+          variant: "destructive",
+        })
+      }
     }, 500)
 
     return () => {
@@ -321,7 +339,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [state, isHydrated])
+  }, [state, isHydrated, toast])
 
   const setCurrentOrg = useCallback((orgId: string) => {
     dispatch({ type: "SET_CURRENT_ORG", payload: orgId })
