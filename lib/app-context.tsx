@@ -320,6 +320,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const storageType = storageServiceRef.current.getStorageType()
         const success = await storageServiceRef.current.save(state)
+        // 如果随后保存成功，自动清理之前可能残留的“同步失败”提示（避免旧提示持续显示）
+        if (success) {
+          try {
+            const existing = toasts.find((t) => {
+              try {
+                return typeof t.title === "string" && t.title === "同步失败"
+              } catch {
+                return false
+              }
+            })
+            if (existing && typeof (existing as any).update === "function") {
+              (existing as any).update({
+                title: "已同步",
+                description: "数据已成功保存到云端",
+                variant: "default",
+              })
+              try {
+                ;(existing as any).dismiss()
+              } catch {}
+            }
+          } catch {}
+        }
         // 只有在使用 Supabase 且用户已登录的情况下，才向用户展示“同步失败”提示
         if (!success && !(storageType === "supabase" && !state.isAuthenticated)) {
           // 去重：如果已有“同步失败”toast，则不再重复弹出
