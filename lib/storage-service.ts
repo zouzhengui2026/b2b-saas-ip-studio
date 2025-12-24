@@ -41,12 +41,14 @@ function clearCachedUserId(): void {
 // ============ Supabase 存储 ============
 
 async function loadFromSupabase(userId: string): Promise<AppState | null> {
-  if (!supabase) return null
-
+  // 在浏览器端使用专门的浏览器客户端以确保请求包含当前会话的 Authorization header
   try {
+    const client = createSupabaseBrowserClient()
+    if (!client) return null
+
     // 可能存在多个记录（历史/重复写入），单条查询使用 single() 会导致 PostgREST 返回 406。
     // 改为按更新时间降序取最新一条并使用 maybeSingle()，兼容 0 或 1 条结果。
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("user_app_state")
       .select("state, version")
       .eq("user_id", userId)
@@ -76,7 +78,9 @@ async function loadFromSupabase(userId: string): Promise<AppState | null> {
 }
 
 async function saveToSupabase(userId: string, state: AppState): Promise<boolean> {
-  if (!supabase) return false
+  // 使用浏览器客户端确保携带当前会话的 token（Authorization header）
+  const client = createSupabaseBrowserClient()
+  if (!client) return false
   // 将 upsert 请求包装重试逻辑（指数退避）
   const payload = {
     user_id: userId,
@@ -96,7 +100,7 @@ async function saveToSupabase(userId: string, state: AppState): Promise<boolean>
         console.log("Supabase upsert attempt", { attempt: attempt + 1, userId: userId ? userId.slice(0, 8) + "..." : null })
       } catch {}
 
-      const { data, error, status } = await supabase
+      const { data, error, status } = await client
         .from("user_app_state")
         .upsert(payload, { onConflict: "user_id" })
 
