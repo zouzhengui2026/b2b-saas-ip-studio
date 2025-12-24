@@ -213,7 +213,8 @@ function clearLocalStorage(): void {
 
 export interface StorageService {
   load: (initialState: AppState) => Promise<AppState>
-  save: (state: AppState) => Promise<void>
+  // 返回 true 表示已成功同步到云端（或 Supabase 未配置），false 表示云端保存失败
+  save: (state: AppState) => Promise<boolean>
   clear: (state: AppState) => Promise<void>
   getStorageType: () => "supabase" | "localStorage"
 }
@@ -258,22 +259,28 @@ export function createStorageService(): StorageService {
       return initialState
     },
 
-    save: async (state: AppState): Promise<void> => {
+    save: async (state: AppState): Promise<boolean> => {
       // 始终保存到 localStorage（作为本地缓存）
       saveToLocalStorage(state)
 
-      // 如果 Supabase 可用且用户已登录，同步到云端
-      if (useSupabase) {
-        const userId = getCachedUserId() || await getAuthUserId()
-        
-        if (userId) {
-          cacheUserId(userId)
-          const success = await saveToSupabase(userId, state)
-          if (success) {
-            console.log("☁️ 已同步到云端")
-          }
-        }
+      // 如果 Supabase 未配置，视为已成功（本地已保存）
+      if (!useSupabase) return true
+
+      // Supabase 已配置：尝试同步到云端
+      const userId = getCachedUserId() || await getAuthUserId()
+      if (!userId) {
+        // 当前无可用 session/userId，视为云端保存失败（提示用户刷新会话或登录）
+        console.warn("Supabase configured but no user session found when saving")
+        return false
       }
+
+      cacheUserId(userId)
+      const success = await saveToSupabase(userId, state)
+      if (success) {
+        console.log("☁️ 已同步到云端")
+        return true
+      }
+      return false
     },
 
     clear: async (_state: AppState): Promise<void> => {
