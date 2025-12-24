@@ -230,39 +230,20 @@ export function createStorageService(): StorageService {
       // 尝试 Supabase（需要用户已登录）
       if (useSupabase) {
         const userId = await getAuthUserId()
-        
+
         if (userId) {
           // 缓存用户 ID 供后续使用
           cacheUserId(userId)
-          
+
           const supabaseRecord = await loadFromSupabase(userId)
           if (supabaseRecord) {
             console.log("✅ 已从 Supabase 云端加载数据", { userId: userId.slice(0, 8) + "..." })
-            // 先读取本地 savedAt（如存在）
-            let localSavedAt: string | null = null
-            try {
-              const raw = localStorage.getItem(STORAGE_KEY)
-              if (raw) {
-                const parsed = JSON.parse(raw)
-                localSavedAt = parsed?.savedAt ?? null
-              }
-            } catch {}
-
-            // 如果本地没有数据，优先使用云端；否则比较时间戳，若云端更新更晚则覆盖本地
-            if (!localSavedAt) {
-              saveToLocalStorage(supabaseRecord.state)
-              return supabaseRecord.state
-            } else {
-              const cloudUpdatedAt = supabaseRecord.updated_at ? new Date(supabaseRecord.updated_at) : null
-              const localUpdatedAt = localSavedAt ? new Date(localSavedAt) : null
-              if (cloudUpdatedAt && localUpdatedAt && cloudUpdatedAt > localUpdatedAt) {
-                saveToLocalStorage(supabaseRecord.state)
-                return supabaseRecord.state
-              }
-              // 本地更新更晚或云端无时间戳 -> 保持本地数据
-            }
+            // 优先使用云端数据（作为单一数据源），然后同步到本地存储
+            // 这样可以确保所有浏览器/设备看到相同的数据
+            saveToLocalStorage(supabaseRecord.state)
+            return supabaseRecord.state
           }
-          
+
           // 用户已登录但云端没有数据 -> 新用户
           console.log("👤 新用户，使用初始状态")
           return initialState

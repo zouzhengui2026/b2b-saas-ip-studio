@@ -424,26 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state, isHydrated, toast])
 
-  // 登录后优先从云端加载 state（仅在本地空或明显更少时覆盖，避免覆盖用户本地未保存更改）
-  useEffect(() => {
-    const tryHydrateAfterLogin = async () => {
-      try {
-        if (!state.isAuthenticated) return
-        const storage = storageServiceRef.current
-        const loadedState = await storage.load(initialAppState)
-        if (!loadedState) return
-        // 仅当本地没有 orgs（新用户/空）且云端有数据时，优先使用云端
-        if ((state.orgs?.length || 0) === 0 && (loadedState.orgs?.length || 0) > 0) {
-          dispatch({ type: "HYDRATE_STATE", payload: loadedState })
-          console.log("🔁 登录后已用云端数据覆盖本地空状态")
-        }
-      } catch (err) {
-        console.error("登录后尝试从云端加载失败:", err)
-      }
-    }
-
-    tryHydrateAfterLogin()
-  }, [state.isAuthenticated])
+  // 数据加载已在 storage-service.load() 中统一处理，这里不再需要额外的登录后加载逻辑
 
   const setCurrentOrg = useCallback((orgId: string) => {
     dispatch({ type: "SET_CURRENT_ORG", payload: orgId })
