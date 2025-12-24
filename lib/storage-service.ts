@@ -44,11 +44,15 @@ async function loadFromSupabase(userId: string): Promise<AppState | null> {
   if (!supabase) return null
 
   try {
+    // 可能存在多个记录（历史/重复写入），单条查询使用 single() 会导致 PostgREST 返回 406。
+    // 改为按更新时间降序取最新一条并使用 maybeSingle()，兼容 0 或 1 条结果。
     const { data, error } = await supabase
       .from("user_app_state")
       .select("state, version")
       .eq("user_id", userId)
-      .single()
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (error) {
       if (error.code === "PGRST116") {
