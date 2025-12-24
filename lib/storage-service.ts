@@ -40,7 +40,8 @@ function clearCachedUserId(): void {
 
 // ============ Supabase 存储 ============
 
-async function loadFromSupabase(userId: string): Promise<AppState | null> {
+// 返回带有元信息的云端记录（包含 updated_at），供登录后比较本地/云端新旧
+async function loadFromSupabase(userId: string): Promise<{ state: AppState; updated_at: string | null } | null> {
   // 在浏览器端使用专门的浏览器客户端以确保请求包含当前会话的 Authorization header
   try {
     const client = createSupabaseBrowserClient()
@@ -50,7 +51,7 @@ async function loadFromSupabase(userId: string): Promise<AppState | null> {
     // 改为按更新时间降序取最新一条并使用 maybeSingle()，兼容 0 或 1 条结果。
     const { data, error } = await client
       .from("user_app_state")
-      .select("state, version")
+      .select("state, version, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -69,8 +70,7 @@ async function loadFromSupabase(userId: string): Promise<AppState | null> {
       console.warn("State version mismatch, will use initial state")
       return null
     }
-
-    return data.state as AppState
+    return { state: data.state as AppState, updated_at: data.updated_at ?? null }
   } catch (error) {
     console.error("Failed to load from Supabase:", error)
     return null
@@ -235,12 +235,32 @@ export function createStorageService(): StorageService {
           // 缓存用户 ID 供后续使用
           cacheUserId(userId)
           
-          const supabaseState = await loadFromSupabase(userId)
-          if (supabaseState) {
+          const supabaseRecord = await loadFromSupabase(userId)
+          if (supabaseRecord) {
             console.log("✅ 已从 Supabase 云端加载数据", { userId: userId.slice(0, 8) + "..." })
-            // 同步到本地缓存
-            saveToLocalStorage(supabaseState)
-            return supabaseState
+            // 先读取本地 savedAt（如存在）
+            let localSavedAt: string | null = null
+            try {
+              const raw = localStorage.getItem(STORAGE_KEY)
+              if (raw) {
+                const parsed = JSON.parse(raw)
+                localSavedAt = parsed?.savedAt ?? null
+              }
+            } catch {}
+
+            // 如果本地没有数据，优先使用云端；否则比较时间戳，若云端更新更晚则覆盖本地
+            if (!localSavedAt) {
+              saveToLocalStorage(supabaseRecord.state)
+              return supabaseRecord.state
+            } else {
+              const cloudUpdatedAt = supabaseRecord.updated_at ? new Date(supabaseRecord.updated_at) : null
+              const localUpdatedAt = localSavedAt ? new Date(localSavedAt) : null
+              if (cloudUpdatedAt && localUpdatedAt && cloudUpdatedAt > localUpdatedAt) {
+                saveToLocalStorage(supabaseRecord.state)
+                return supabaseRecord.state
+              }
+              // 本地更新更晚或云端无时间戳 -> 保持本地数据
+            }
           }
           
           // 用户已登录但云端没有数据 -> 新用户
