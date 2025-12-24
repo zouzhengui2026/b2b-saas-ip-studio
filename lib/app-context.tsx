@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useReducer, useCallback, useMemo, useEffect, useState, useRef, type ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 import type { AppState, AppAction, Content, ContentStatus, ContentMetrics, QaResult, PublishPack, Settings } from "./types"
 import { initialAppState } from "./mock-data"
 import { sleep } from "./utils"
@@ -303,7 +304,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     syncFromCloud()
   }, [])
 
-  const { toast } = useToast()
+  const { toast, toasts } = useToast()
 
   // 监听状态变化，防抖保存到存储（捕获云端失败并提示）
   useEffect(() => {
@@ -317,13 +318,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 防抖：500ms 后保存
     saveTimeoutRef.current = setTimeout(async () => {
       try {
+        const storageType = storageServiceRef.current.getStorageType()
         const success = await storageServiceRef.current.save(state)
-        if (!success) {
-          toast({
-            title: "同步失败",
-            description: "保存到云端失败，数据已保存在本地，请检查网络或稍后重试",
-            variant: "destructive",
+        // 只有在使用 Supabase 且用户已登录的情况下，才向用户展示“同步失败”提示
+        if (!success && !(storageType === "supabase" && !state.isAuthenticated)) {
+          // 去重：如果已有“同步失败”toast，则不再重复弹出
+          const exists = toasts.find((t) => {
+            try {
+              return typeof t.title === "string" && t.title === "同步失败"
+            } catch {
+              return false
+            }
           })
+          if (!exists) {
+            const toastHandle = toast({
+              title: "同步失败",
+              description: "保存到云端失败，数据已保存在本地，请检查网络或稍后重试",
+              variant: "destructive",
+              // 提供操作：重试 & 刷新页面（可作为刷新会话的快捷方式）
+              action: (
+                <div className="flex gap-2">
+                  <ToastAction
+                    onClick={async () => {
+                      // 直接尝试重试一次保存
+                      try {
+                        const ok = await storageServiceRef.current.save(state)
+                        if (ok) {
+                          toastHandle.update({
+                            title: "已同步",
+                            description: "数据已成功保存到云端",
+                            variant: "default",
+                          })
+                          // 自动收起
+                          toastHandle.dismiss()
+                        } else {
+                          toastHandle.update({
+                            title: "重试失败",
+                            description: "再次保存失败，请检查网络或刷新会话后重试",
+                            variant: "destructive",
+                          })
+                        }
+                      } catch (err) {
+                        toastHandle.update({
+                          title: "重试异常",
+                          description: "重试保存时发生错误",
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                  >
+                    重试
+                  </ToastAction>
+                  <ToastAction
+                    onClick={() => {
+                      // 作为刷新会话的快捷方式，用户可以重新加载页面以触发 auth/session 恢复
+                      try {
+                        window.location.reload()
+                      } catch {
+                        // no-op
+                      }
+                    }}
+                  >
+                    刷新会话
+                  </ToastAction>
+                </div>
+              ),
+            })
+          }
         }
       } catch (e) {
         toast({
@@ -340,6 +401,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [state, isHydrated, toast])
+
+  // 登录后优先从云端加载 state（仅在本地空或明显更少时覆盖，避免覆盖用户本地未保存更改）
+  useEffect(() => {
+    const tryHydrateAfterLogin = async () => {
+      try {
+        if (!state.isAuthenticated) return
+        const storage = storageServiceRef.current
+        const loadedState = await storage.load(initialAppState)
+        if (!loadedState) return
+        // 仅当本地没有 orgs（新用户/空）且云端有数据时，优先使用云端
+        if ((state.orgs?.length || 0) === 0 && (loadedState.orgs?.length || 0) > 0) {
+          dispatch({ type: "HYDRATE_STATE", payload: loadedState })
+          console.log("🔁 登录后已用云端数据覆盖本地空状态")
+        }
+      } catch (err) {
+        console.error("登录后尝试从云端加载失败:", err)
+      }
+    }
+
+    tryHydrateAfterLogin()
+  }, [state.isAuthenticated])
 
   const setCurrentOrg = useCallback((orgId: string) => {
     dispatch({ type: "SET_CURRENT_ORG", payload: orgId })
