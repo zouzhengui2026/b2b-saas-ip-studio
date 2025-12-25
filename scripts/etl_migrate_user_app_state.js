@@ -111,7 +111,22 @@ async function insertContent(userId, content, personaId) {
 
 async function migrateRow(row, dryRun = true) {
   const userId = row.user_id
-  const state = row.state || {}
+  // state may be a JSON string when exported; parse if necessary
+  let state = row.state || {}
+  if (typeof state === "string") {
+    try {
+      state = JSON.parse(state)
+    } catch (e) {
+      console.warn("Warning: failed to parse state JSON for row", row.id, e.message)
+      state = {}
+    }
+  }
+  // summary counts
+  const orgCount = Array.isArray(state.orgs) ? state.orgs.length : 0
+  const personaCount = Array.isArray(state.personas) ? state.personas.length : 0
+  const contentCount = Array.isArray(state.contents) ? state.contents.length : 0
+  console.log(`\n=== Processing user_id=${userId} (row id=${row.id}) ===`)
+  console.log(`summary: orgs=${orgCount}, personas=${personaCount}, contents=${contentCount}`)
   console.log(`\n=== Processing user_id=${userId} (row id=${row.id}) ===`)
 
   // Mapping oldOrgId -> newOrgId and oldPersonaId -> newPersonaId
@@ -123,7 +138,6 @@ async function migrateRow(row, dryRun = true) {
   for (const org of orgs) {
     if (dryRun) {
       console.log(`[dry-run] would upsert org: user=${userId} name=${org.name} oldId=${org.id}`)
-      // still record mapping in dry-run using placeholder keys so later logs can reference
       orgIdMap.set(org.id, `__dry_org_${org.id}`)
       continue
     }
@@ -135,7 +149,7 @@ async function migrateRow(row, dryRun = true) {
   // Personas: process all personas and map to new persona ids
   const personas = Array.isArray(state.personas) ? state.personas : []
   for (const persona of personas) {
-    const oldOrgKey = persona.orgId ?? null
+    const oldOrgKey = persona.orgId ?? persona.orgID ?? persona.org_id ?? null
     const mappedOrgId = orgIdMap.get(oldOrgKey) || null
     if (dryRun) {
       console.log(`[dry-run] would insert persona: ${persona.name} oldId=${persona.id} orgOld=${oldOrgKey} -> orgNew=${mappedOrgId}`)
@@ -150,7 +164,7 @@ async function migrateRow(row, dryRun = true) {
   // Contents: insert and map persona references
   const contents = Array.isArray(state.contents) ? state.contents : []
   for (const content of contents) {
-    const oldPersonaKey = content.personaId ?? content.persona_id ?? null
+    const oldPersonaKey = content.personaId ?? content.persona_id ?? content.persona ?? null
     const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
     if (dryRun) {
       console.log(`[dry-run] would insert content: ${content.title ?? content.id} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
