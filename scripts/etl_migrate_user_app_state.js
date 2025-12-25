@@ -280,7 +280,10 @@ async function main() {
   }
 
   await client.connect()
-  await ensureExtensions()
+  // Only ensure extensions when performing real DB writes (not dry-run)
+  if (!DRY_RUN) {
+    await ensureExtensions()
+  }
 
   const rows = await fetchUserAppStateRows(LIMIT)
   console.log(`Fetched ${rows.length} user_app_state rows (limit=${LIMIT})`)
