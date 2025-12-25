@@ -21,6 +21,7 @@
 
 import { Client } from "pg"
 import process from "process"
+import fs from "fs"
 
 const argv = Object.fromEntries(
   process.argv.slice(2).map((arg) => {
@@ -31,6 +32,7 @@ const argv = Object.fromEntries(
 
 const DRY_RUN = argv["dry-run"] === "true" || argv["dry-run"] === undefined
 const LIMIT = argv["limit"] ? parseInt(argv["limit"], 10) : null
+const INPUT_FILE = argv["input-file"] || null
 
 if (!process.env.DATABASE_URL) {
   console.error("ERROR: Please set DATABASE_URL environment variable (Supabase connection string).")
@@ -67,6 +69,25 @@ async function upsertOrg(userId, org) {
     RETURNING id
   `
   const res = await client.query(insertQ, [userId, org.name ?? "未命名机构", JSON.stringify(org.meta ?? {})])
+  return res.rows[0].id
+}
+
+// insert persona, orgId may be null
+async function insertPersona(userId, persona, orgId) {
+  const insertQ = `
+    INSERT INTO personas (org_id, user_id, name, avatar, status, business_stage, meta, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NOW(), NOW())
+    RETURNING id
+  `
+  const res = await client.query(insertQ, [
+    orgId,
+    userId,
+    persona.name ?? "未命名IP",
+    persona.avatar ?? null,
+    persona.status ?? null,
+    persona.business_stage ?? null,
+    JSON.stringify(persona.meta ?? {}),
+  ])
   return res.rows[0].id
 }
 
@@ -111,45 +132,50 @@ async function migrateRow(row, dryRun = true) {
   const state = row.state || {}
   console.log(`\n=== Processing user_id=${userId} (row id=${row.id}) ===`)
 
-  // Mapping oldPersonaId -> newPersonaId
+  // Mapping oldOrgId -> newOrgId and oldPersonaId -> newPersonaId
+  const orgIdMap = new Map()
   const personaIdMap = new Map()
 
   // Orgs
   const orgs = Array.isArray(state.orgs) ? state.orgs : []
   for (const org of orgs) {
     if (dryRun) {
-      console.log(`[dry-run] would upsert org: user=${userId} name=${org.name}`)
+      console.log(`[dry-run] would upsert org: user=${userId} name=${org.name} oldId=${org.id}`)
+      // still record mapping in dry-run using placeholder keys so later logs can reference
+      orgIdMap.set(org.id, `__dry_org_${org.id}`)
       continue
     }
     const newOrgId = await upsertOrg(userId, org)
-    // if old org had id, we could record mapping; for now not necessary
-    console.log(`  -> org inserted/upserted id=${newOrgId}`)
+    orgIdMap.set(org.id, newOrgId)
+    console.log(`  -> org inserted/upserted id=${newOrgId} (old=${org.id})`)
+  }
 
-    // Personas for this org
-    const personas = Array.isArray(state.personas) ? state.personas.filter((p) => p.orgId === org.id || p.orgId === org.oldId) : []
-    for (const persona of personas) {
-      if (dryRun) {
-        console.log(`[dry-run]   would insert persona: ${persona.name} (org=${org.name})`)
-        continue
-      }
-      const newPersonaId = await insertPersona(userId, persona, newOrgId)
-      personaIdMap.set(persona.id ?? persona.oldId ?? JSON.stringify(persona), newPersonaId)
-      console.log(`    -> persona inserted id=${newPersonaId}`)
+  // Personas: process all personas and map to new persona ids
+  const personas = Array.isArray(state.personas) ? state.personas : []
+  for (const persona of personas) {
+    const oldOrgKey = persona.orgId ?? null
+    const mappedOrgId = orgIdMap.get(oldOrgKey) || null
+    if (dryRun) {
+      console.log(`[dry-run] would insert persona: ${persona.name} oldId=${persona.id} orgOld=${oldOrgKey} -> orgNew=${mappedOrgId}`)
+      personaIdMap.set(persona.id, `__dry_persona_${persona.id}`)
+      continue
     }
+    const newPersonaId = await insertPersona(userId, persona, mappedOrgId)
+    personaIdMap.set(persona.id, newPersonaId)
+    console.log(`  -> persona inserted id=${newPersonaId} (old=${persona.id})`)
+  }
 
-    // Contents linked to personas under this org
-    const contents = Array.isArray(state.contents) ? state.contents.filter((c) => c.orgId === org.id || personaIdMap.has(c.personaId)) : []
-    for (const content of contents) {
-      if (dryRun) {
-        console.log(`[dry-run]   would insert content: ${content.title ?? content.id}`)
-        continue
-      }
-      // Attempt to resolve personaId
-      const oldPersonaKey = content.personaId ?? content.persona_id ?? null
-      const newPersonaId = personaIdMap.get(oldPersonaKey) || null
-      const newContentId = await insertContent(userId, content, newPersonaId)
-      console.log(`    -> content inserted id=${newContentId} (persona_id=${newPersonaId})`)
+  // Contents: insert and map persona references
+  const contents = Array.isArray(state.contents) ? state.contents : []
+  for (const content of contents) {
+    const oldPersonaKey = content.personaId ?? content.persona_id ?? null
+    const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
+    if (dryRun) {
+      console.log(`[dry-run] would insert content: ${content.title ?? content.id} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
+      continue
     }
+    const newContentId = await insertContent(userId, content, mappedPersonaId)
+    console.log(`  -> content inserted id=${newContentId} (old=${content.id}) persona_id=${mappedPersonaId}`)
   }
 
   // If no orgs present, still migrate personas/contents at top-level
@@ -188,6 +214,18 @@ async function migrateRow(row, dryRun = true) {
 }
 
 async function main() {
+  if (INPUT_FILE) {
+    // run dry-run on local input file without connecting to DB
+    const raw = fs.readFileSync(INPUT_FILE, "utf8")
+    const rows = JSON.parse(raw)
+    console.log(`Loaded ${rows.length} rows from input file ${INPUT_FILE}`)
+    for (const row of rows) {
+      await migrateRow(row, true)
+    }
+    console.log("Dry-run complete (input-file).")
+    return
+  }
+
   await client.connect()
   await ensureExtensions()
 
