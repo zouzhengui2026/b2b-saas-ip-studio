@@ -109,6 +109,18 @@ async function insertContent(userId, content, personaId) {
   return res.rows[0].id
 }
 
+// log migration mapping for rollback/traceability
+async function logMigrationAudit(userId, sourceTable, sourceId, targetTable, targetId, meta = {}) {
+  try {
+    await client.query(
+      `INSERT INTO migration_audit (user_id, source_table, source_id, target_table, target_id, meta) VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+      [userId, sourceTable, sourceId, targetTable, targetId, JSON.stringify(meta)]
+    )
+  } catch (e) {
+    console.warn("Failed to write migration_audit:", e?.message ?? e)
+  }
+}
+
 async function migrateRow(row, dryRun = true) {
   const userId = row.user_id
   // state may be a JSON string when exported; parse if necessary
@@ -144,6 +156,7 @@ async function migrateRow(row, dryRun = true) {
     const newOrgId = await upsertOrg(userId, org)
     orgIdMap.set(org.id, newOrgId)
     console.log(`  -> org inserted/upserted id=${newOrgId} (old=${org.id})`)
+    await logMigrationAudit(userId, "user_app_state.orgs", org.id, "orgs", newOrgId, { name: org.name })
   }
 
   // Personas: process all personas and map to new persona ids
@@ -159,6 +172,7 @@ async function migrateRow(row, dryRun = true) {
     const newPersonaId = await insertPersona(userId, persona, mappedOrgId)
     personaIdMap.set(persona.id, newPersonaId)
     console.log(`  -> persona inserted id=${newPersonaId} (old=${persona.id})`)
+    await logMigrationAudit(userId, "user_app_state.personas", persona.id, "personas", newPersonaId, { name: persona.name })
   }
 
   // Contents: insert and map persona references
@@ -172,6 +186,7 @@ async function migrateRow(row, dryRun = true) {
     }
     const newContentId = await insertContent(userId, content, mappedPersonaId)
     console.log(`  -> content inserted id=${newContentId} (old=${content.id}) persona_id=${mappedPersonaId}`)
+    await logMigrationAudit(userId, "user_app_state.contents", content.id, "contents", newContentId, { title: content.title })
   }
 
   // Accounts
@@ -249,6 +264,7 @@ async function migrateRow(row, dryRun = true) {
         return insertPersona(userId, persona, fallbackOrgId)
       })
       personaIdMap.set(persona.id ?? persona.oldId ?? JSON.stringify(persona), newPersonaId)
+      await logMigrationAudit(userId, "user_app_state.personas", persona.id, "personas", newPersonaId, { name: persona.name })
     }
 
     // Contents
@@ -262,6 +278,7 @@ async function migrateRow(row, dryRun = true) {
       const newPersonaId = personaIdMap.get(oldPersonaKey) || null
       const newContentId = await insertContent(userId, content, newPersonaId)
       console.log(`    -> content inserted id=${newContentId} (persona_id=${newPersonaId})`)
+      await logMigrationAudit(userId, "user_app_state.contents", content.id, "contents", newContentId, { title: content.title })
     }
   }
 }

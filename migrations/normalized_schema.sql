@@ -94,6 +94,19 @@ CREATE TABLE IF NOT EXISTS audit_events (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Migration audit: record mapping from old JSON ids to new normalized ids
+CREATE TABLE IF NOT EXISTS migration_audit (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT,
+  source_table TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  target_table TEXT NOT NULL,
+  target_id UUID,
+  meta JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_migration_audit_user_id ON migration_audit(user_id);
+
 -- =========================
 -- Helpers: update triggers
 -- =========================
