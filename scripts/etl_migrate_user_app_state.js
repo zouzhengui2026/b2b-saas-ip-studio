@@ -34,8 +34,8 @@ const DRY_RUN = argv["dry-run"] === "true" || argv["dry-run"] === undefined
 const LIMIT = argv["limit"] ? parseInt(argv["limit"], 10) : null
 const INPUT_FILE = argv["input-file"] || null
 
-if (!process.env.DATABASE_URL) {
-  console.error("ERROR: Please set DATABASE_URL environment variable (Supabase connection string).")
+if (!process.env.DATABASE_URL && !INPUT_FILE) {
+  console.error("ERROR: Please set DATABASE_URL environment variable (Supabase connection string) or pass --input-file for dry-run.")
   process.exit(1)
 }
 
@@ -73,24 +73,6 @@ async function upsertOrg(userId, org) {
 }
 
 // insert persona, orgId may be null
-async function insertPersona(userId, persona, orgId) {
-  const insertQ = `
-    INSERT INTO personas (org_id, user_id, name, avatar, status, business_stage, meta, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, NOW(), NOW())
-    RETURNING id
-  `
-  const res = await client.query(insertQ, [
-    orgId,
-    userId,
-    persona.name ?? "未命名IP",
-    persona.avatar ?? null,
-    persona.status ?? null,
-    persona.business_stage ?? null,
-    JSON.stringify(persona.meta ?? {}),
-  ])
-  return res.rows[0].id
-}
-
 async function insertPersona(userId, persona, orgId) {
   const insertQ = `
     INSERT INTO personas (org_id, user_id, name, avatar, status, business_stage, meta, created_at, updated_at)
