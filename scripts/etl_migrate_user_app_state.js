@@ -174,6 +174,63 @@ async function migrateRow(row, dryRun = true) {
     console.log(`  -> content inserted id=${newContentId} (old=${content.id}) persona_id=${mappedPersonaId}`)
   }
 
+  // Accounts
+  const accounts = Array.isArray(state.accounts) ? state.accounts : []
+  for (const account of accounts) {
+    const oldPersonaKey = account.personaId ?? account.persona_id ?? null
+    const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
+    // Prepare SQL preview
+    const sqlPreview = `INSERT INTO accounts (user_id, persona_id, platform, account_id, account_name, meta, created_at) VALUES ('${userId}', '${mappedPersonaId}', '${account.platform ?? ""}', '${(account.accountId ?? "").replace(/'/g,"''")}', '${(account.accountName ?? "").replace(/'/g,"''")}', '${JSON.stringify(account).replace(/'/g,"''")}', '${account.createdAt ?? "NOW()"}');`
+    if (dryRun) {
+      console.log(`[dry-run] would insert account: platform=${account.platform} accountId=${account.accountId} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
+      console.log(`[dry-run]   SQL preview: ${sqlPreview}`)
+      continue
+    }
+    // Non-dry-run: not implemented until authorized
+    console.log(`[run] account insert not implemented (requires authorization). SQL preview: ${sqlPreview}`)
+  }
+
+  // Leads
+  const leads = Array.isArray(state.leads) ? state.leads : []
+  for (const lead of leads) {
+    const oldPersonaKey = lead.personaId ?? lead.persona_id ?? null
+    const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
+    const sqlPreview = `INSERT INTO leads (user_id, org_id, persona_id, payload, status, created_at) VALUES ('${userId}', NULL, '${mappedPersonaId}', '${JSON.stringify(lead).replace(/'/g,"''")}', '${lead.status ?? ""}', '${lead.createdAt ?? "NOW()"}');`
+    if (dryRun) {
+      console.log(`[dry-run] would insert lead: name=${lead.name} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
+      console.log(`[dry-run]   SQL preview: ${sqlPreview}`)
+      continue
+    }
+    console.log(`[run] lead insert not implemented (requires authorization). SQL preview: ${sqlPreview}`)
+  }
+
+  // References
+  const references = Array.isArray(state.references) ? state.references : []
+  for (const ref of references) {
+    const oldPersonaKey = ref.personaId ?? ref.persona_id ?? null
+    const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
+    const sqlPreview = `INSERT INTO references (user_id, persona_id, url, title, meta, created_at) VALUES ('${userId}', '${mappedPersonaId}', '${(ref.url ?? "").replace(/'/g,"''")}', '${(ref.title ?? "").replace(/'/g,"''")}', '${JSON.stringify(ref).replace(/'/g,"''")}', '${ref.collectedAt ?? "NOW()"}');`
+    if (dryRun) {
+      console.log(`[dry-run] would insert reference: title=${ref.title} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
+      console.log(`[dry-run]   SQL preview: ${sqlPreview}`)
+      continue
+    }
+    console.log(`[run] reference insert not implemented (requires authorization). SQL preview: ${sqlPreview}`)
+  }
+
+  // Inbox items
+  const inboxItems = Array.isArray(state.inboxItems) ? state.inboxItems : []
+  for (const item of inboxItems) {
+    const oldPersonaKey = item.personaId ?? item.persona_id ?? null
+    const mappedPersonaId = personaIdMap.get(oldPersonaKey) || null
+    const sqlPreview = `INSERT INTO inbox_items (user_id, persona_id, type, title, payload, created_at) VALUES ('${userId}', '${mappedPersonaId}', '${item.type ?? ""}', '${(item.title ?? "").replace(/'/g,"''")}', '${JSON.stringify(item).replace(/'/g,"''")}', '${item.createdAt ?? "NOW()"}');`
+    if (dryRun) {
+      console.log(`[dry-run] would insert inbox item: type=${item.type} title=${item.title} oldPersona=${oldPersonaKey} -> newPersona=${mappedPersonaId}`)
+      console.log(`[dry-run]   SQL preview: ${sqlPreview}`)
+      continue
+    }
+    console.log(`[run] inbox item insert not implemented (requires authorization). SQL preview: ${sqlPreview}`)
+  }
   // If no orgs present, still migrate personas/contents at top-level
   if (orgs.length === 0) {
     // Personas
