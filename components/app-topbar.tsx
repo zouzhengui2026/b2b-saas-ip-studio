@@ -19,7 +19,7 @@ import { AddInboxDialog } from "./add-inbox-dialog"
 import { AddLeadDrawer } from "./add-lead-dialog"
 
 export function AppTopbar() {
-  const { state, currentOrg, currentPersona, currentOrgPersonas, setCurrentOrg, setCurrentIp } = useAppStore()
+  const { state, currentOrg, currentPersona, currentOrgPersonas, setCurrentOrg, setCurrentIp, isLoading } = useAppStore()
   const router = useRouter()
   const [showInboxDialog, setShowInboxDialog] = useState(false)
   const [showLeadDialog, setShowLeadDialog] = useState(false)
@@ -30,73 +30,82 @@ export function AppTopbar() {
     router.push("/login")
     router.refresh()
   }
-  // 避免 SSR 和客户端文本不一致：只有客户端挂载后显示组织名称
-  const [isMounted, setIsMounted] = useState(false)
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   return (
     <>
       <header className="h-14 border-b border-border/50 bg-background/60 backdrop-blur-xl px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Org Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
-              >
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{isMounted ? (currentOrg?.name || "选择组织") : "选择组织"}</span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="glass-card border-border/50">
-              <DropdownMenuLabel className="text-muted-foreground">切换组织</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border/50" />
-              {state.orgs.map((org) => (
-                <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => setCurrentOrg(org.id)}
-                  className={org.id === state.currentOrgId ? "bg-primary/20 text-primary" : ""}
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-muted-foreground">加载中...</span>
+            </div>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
                 >
-                  {org.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{currentOrg?.name || "选择组织"}</span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="glass-card border-border/50">
+                <DropdownMenuLabel className="text-muted-foreground">切换组织</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border/50" />
+                {state.orgs.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => setCurrentOrg(org.id)}
+                    className={org.id === state.currentOrgId ? "bg-primary/20 text-primary" : ""}
+                  >
+                    {org.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* IP Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
-              >
-                <User2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">{isMounted ? (currentPersona?.name || "选择IP") : "选择IP"}</span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="glass-card border-border/50">
-              <DropdownMenuLabel className="text-muted-foreground">切换IP</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border/50" />
-              {currentOrgPersonas.length === 0 ? (
-                <DropdownMenuItem disabled>暂无IP</DropdownMenuItem>
-              ) : (
-                currentOrgPersonas.map((persona) => (
-                  <DropdownMenuItem
-                    key={persona.id}
-                    onClick={() => setCurrentIp(persona.id)}
-                    className={persona.id === state.currentIpId ? "bg-primary/20 text-primary" : ""}
-                  >
-                    {persona.name}
-                  </DropdownMenuItem>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-3 py-2">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-muted-foreground">加载中...</span>
+            </div>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 bg-secondary/50 border-border/50 hover:bg-secondary hover:border-border"
+                >
+                  <User2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-foreground">{currentPersona?.name || "选择IP"}</span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="glass-card border-border/50">
+                <DropdownMenuLabel className="text-muted-foreground">切换IP</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border/50" />
+                {currentOrgPersonas.length === 0 ? (
+                  <DropdownMenuItem disabled>暂无IP</DropdownMenuItem>
+                ) : (
+                  currentOrgPersonas.map((persona) => (
+                    <DropdownMenuItem
+                      key={persona.id}
+                      onClick={() => setCurrentIp(persona.id)}
+                      className={persona.id === state.currentIpId ? "bg-primary/20 text-primary" : ""}
+                    >
+                      {persona.name}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

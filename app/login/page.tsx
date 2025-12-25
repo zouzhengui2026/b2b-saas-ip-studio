@@ -65,7 +65,6 @@ export default function LoginPage() {
       }
       toast({ title: "登录成功", description: "欢迎回来！" })
       router.push("/dashboard")
-      router.refresh()
     }
     setLoading(false)
   }
@@ -254,9 +253,10 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <Label htmlFor="login-password" className="text-foreground">密码</Label>
                     <Input
-                      id="login-password"
+                    id="login-password"
                       type="password"
                       placeholder="请输入密码"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
@@ -298,9 +298,10 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <Label htmlFor="register-password" className="text-foreground">密码</Label>
                     <Input
-                      id="register-password"
+                    id="register-password"
                       type="password"
                       placeholder="请输入密码（至少6位）"
+                      autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
@@ -309,9 +310,10 @@ export default function LoginPage() {
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password" className="text-foreground">确认密码</Label>
                     <Input
-                      id="confirm-password"
+                    id="confirm-password"
                       type="password"
                       placeholder="请再次输入密码"
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="bg-secondary/50 border-border/50 focus:border-primary focus:ring-primary/20 h-11"
